@@ -1,0 +1,73 @@
+---
+title: "Final Project"
+format: html
+editor: visual
+---
+
+## Bayes Renewable Energy Forecasting
+
+[Data on Kaggle](https://www.kaggle.com/datasets/nicholasjhana/energy-consumption-generation-prices-and-weather/data)
+
+**Objective:** Plot the distribution of total energy demand. Can any of the features in the data help us predict demand? Can any of the features in the data help us predict wind or solar energy generation. Can we forecast a renewable energy sources supply and total energy demand to see the gap?
+
+**Guidance:** Join the data, extract features from date (day of week, season, hour, etc..), filter city for Barcelona
+
+## Loading in Libraries
+
+```{r, warning = FALSE, message=FALSE}
+# Libraries
+library(janitor)
+library(here)
+library(tidyverse)
+library(rstan)
+library(bayesrules)
+library(bayesplot)
+library(broom.mixed)
+library(ggpubr)
+```
+
+## Reading in Data
+
+```{r}
+energy_data <- read.csv("Data/energy_dataset.csv")
+weather_features_data <- read.csv("Data/weather_features.csv")
+```
+
+## Joining the Data Frames Together
+
+```{r}
+names(weather_features_data)[names(weather_features_data) == "dt_iso"] <- "time"
+str(weather_features_data)
+```
+
+```{r}
+energy_weather_data <- merge(energy_data, weather_features_data, by = c("time"))
+```
+
+```{r}
+# Writing a New CSV File
+write.csv(energy_weather_data, "energy_weather_data")
+```
+
+## Exploratory Analysis
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+## Bayesian Method
+
+## Answering the Following Questions
+
+## 
