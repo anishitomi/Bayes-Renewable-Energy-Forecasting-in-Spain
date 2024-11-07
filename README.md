@@ -1,7 +1,6 @@
 # Bayes-Renewable-Energy-Forecasting-in-Spain
 Welcome to our Final Project for **DS 400: Bayesian Statistics** 💻 ⛅ 🌱 
 
-
 **Project Description**
 At Chaminade University of Honolulu, we have a Final Semester Project and we have been tasked to explore Renewable Energy Forecasting in Spain 🇪🇸📌
 Within this project, will be tasked to dive deeper into use specific case of Bayesian Statistics to predict and analyze Renewable Energy Forcasting in Spain. 
@@ -14,3 +13,5 @@ Within this project, will be tasked to dive deeper into use specific case of Bay
 - William Kim
 - Andrew Nishitomi
 
+### 🧰 Languages/Tools
+<img align="left" alt="rstudio" width="30px" style="padding-right:10px;" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rstudio/rstudio-original.svg" />
