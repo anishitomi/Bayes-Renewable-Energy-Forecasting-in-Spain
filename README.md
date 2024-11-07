@@ -1,13 +1,13 @@
 # Bayes-Renewable-Energy-Forecasting-in-Spain
-## Welcome to our Final Project for **DS 400: Bayesian Statistics** 💻 ⛅ 🌱 
+## Welcome to our Final Project for **DS 400: Bayesian Statistics** 💻 ⛅ 🌱 💨
 
 <img align="center" alt="chamlogo" width="150px" style="padding-right:150px;" src="https://assets.chaminade.edu/wp-content/uploads/2018/08/08074025/Chaminade-Logo-Centered.jpg" /> 
 
-### **Project Description** <br>
+### **Project Description** <br> 📋
 At Chaminade University of Honolulu, we have a Final Semester Project and we have been tasked to explore Renewable Energy Forecasting in Spain 🇪🇸📌. Within this project, will be tasked to dive deeper
 into use specific case of Bayesian Statistics to predict and analyze Renewable Energy Forcasting in Spain. 
 
-### **Objective of our Project:** <br>
+### **Objective of our Project:** <br> :  📊 📈 📉
 Plot the distribution of total energy demand. Can any of the features in the data help us predict demand? Can any of the features in the data help us predict wind or solar energy generation. Can we
 forecast a renewable energy sources supply and total energy demand to see the gap?
 
