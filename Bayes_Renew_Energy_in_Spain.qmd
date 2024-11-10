@@ -155,9 +155,13 @@ ggplot(data = barcelona_1, aes(x = `price actual`, y = `total load actual`)) +
   stat_cor()
 ```
 
+This unique function is to just explore different values in certain columns of the dataset
+
 ```{r}
-sort(unique(barcelona_1$season))
+sort(unique(barcelona_1$weather_icon))
 ```
+
+Mutliple Box Plots that look at Total Load Actual by Month, Days of the Week, and Season
 
 ```{r}
 ggplot(data = barcelona_1, aes(x = month, y = `total load actual`, fill = month)) +
