@@ -114,9 +114,20 @@ barcelona_1$day_of_the_week <-format(barcelona_1$time, "%a")
 ##### Seasons in Spain link: <https://seasonsyear.com/Spain/Barcelona>
 
 ```{r}
-barcelona_1$season <- ifelse(barcelona_1$month>=3 & barcelona_1$month<=5, "Spring",
-                             ifelse(barcelona_1$month>=6 & barcelona_1$month<=8, "Summer",
-                                    ifelse(barcelona_1$month>=9 & barcelona_1$month<=11, "Fall","Winter")))
+barcelona_1 <- barcelona_1 %>%
+  mutate(season = case_when(
+    month >= 3 & month <= 5 ~ "Spring",
+    month >= 6 & month <= 8 ~ "Summer",
+    month >= 9 & month <= 11 ~ "Fall",
+    TRUE ~ "Winter"
+  ))
+
+```
+
+This unique function is to just explore different values in certain columns of the dataset
+
+```{r}
+sort(unique(barcelona_1$season))
 ```
 
 ```{r, warning = FALSE, message=FALSE}
@@ -153,12 +164,6 @@ ggplot(data = barcelona_1, aes(x = `price actual`, y = `total load actual`)) +
   geom_point() +
   stat_smooth(method = "lm") +
   stat_cor()
-```
-
-This unique function is to just explore different values in certain columns of the dataset
-
-```{r}
-sort(unique(barcelona_1$weather_icon))
 ```
 
 Mutliple Box Plots that look at Total Load Actual by Month, Days of the Week, and Season
