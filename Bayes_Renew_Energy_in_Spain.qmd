@@ -93,7 +93,7 @@ view(df_zero_na)
 #### Remove other columns such as city_name and have only zero/NA values
 
 ```{r}
-barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, `generation hydro pumped storage aggregated`, `forecast wind offshore eday ahead`, rain_1h, rain_3h, snow_3h))
+barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, weather_id, `generation hydro pumped storage aggregated`, `forecast wind offshore eday ahead`, rain_1h, rain_3h, snow_3h))
 
 ```
 
@@ -114,7 +114,7 @@ barcelona_1$day_of_the_week <-format(barcelona_1$time, "%a")
 
 ```{r}
 barcelona_1$season <- ifelse(barcelona_1$month>=3 & barcelona_1$month<=5, "Spring",
-                             ifelse(Barcelona_1$month>=6 & barcelona_1$month<=8, "Summer",
+                             ifelse(barcelona_1$month>=6 & barcelona_1$month<=8, "Summer",
                                     ifelse(barcelona_1$month>=9 & barcelona_1$month<=11, "Fall","Winter")))
 ```
 
@@ -128,6 +128,15 @@ view(barcelona_1)
 
 ```{r}
 barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
+```
+
+#### Data Visuals
+
+Plot that looks at the amount of waste generated each year in Barcelona
+
+```{r}
+ggplot(data = barcelona_1, aes(y = `generation waste`, fill = year)) +
+  geom_boxplot()
 ```
 
 ## Bayesian Method
