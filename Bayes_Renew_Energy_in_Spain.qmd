@@ -148,6 +148,28 @@ ggplot(barcelona_1, aes(x = time, y = `generation biomass`, color = year, group 
   scale_color_brewer(palette = "Set1")  # Choose a color palette
 ```
 
+```{r}
+ggplot(data = barcelona_1, aes(x = `price actual`, y = `total load actual`)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  stat_cor()
+```
+
+```{r}
+sort(unique(barcelona_1$season))
+```
+
+```{r}
+ggplot(data = barcelona_1, aes(x = month, y = `total load actual`, fill = month)) +
+  geom_boxplot()
+
+ggplot(data = barcelona_1, aes(x = day_of_the_week, y = `total load actual`, fill = day_of_the_week)) +
+  geom_boxplot()
+
+ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = season)) +
+  geom_boxplot()
+```
+
 ## Bayesian Method
 
 ## Answering the Following Questions
