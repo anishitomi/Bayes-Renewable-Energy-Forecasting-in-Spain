@@ -29,8 +29,8 @@ library(ggpubr)
 ## Reading in Data
 
 ```{r}
-energy_data <- read.csv("Data/energy_dataset.csv")
-weather_features_data <- read.csv("Data/weather_features.csv")
+energy_data <- read_csv("Data/energy_dataset.csv")
+weather_features_data <- read_csv("Data/weather_features.csv")
 ```
 
 ## Joining the Data Frames Together
@@ -51,20 +51,79 @@ write.csv(energy_weather_data, "energy_weather_data")
 
 ## Exploratory Analysis
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+#### Exploring Combined Dataset
 
 ```{r}
-1 + 1
+energy_weather_data <- read_csv("energy_weather_data")
+dim(energy_weather_data)
 ```
 
-You can add options to executable code like this
+#### Filter for Barcelona
 
 ```{r}
-#| echo: false
-2 * 2
+barcelona_weather_data <- energy_weather_data %>% 
+  filter(city_name == "Barcelona")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+#### Looking at the `dim` of new `barcelona_weather_data`
+
+```{r}
+dim(barcelona_weather_data)
+```
+
+#### Count columns that have too much `zeros` or `NAs`
+
+```{r}
+df_na <- as.data.frame(colSums(is.na(barcelona_weather_data)))
+```
+
+#### Count `zeros`
+
+```{r}
+df_zero <- as.data.frame(colSums(barcelona_weather_data==0))
+```
+
+#### Combine zero and NA data for better viewing
+
+```{r}
+df_zero_na <- cbind(df_na, df_zero)
+view(df_zero_na)
+```
+
+#### Remove other columns such as city_name and have only zero/NA values
+
+```{r}
+Barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, 
+                                                          generation.hydro.pumped.storage.aggregated, 
+                                                          forecast.wind.offshore.eday.ahead, rain_1h,
+                                                          rain_3h, snow_3h))
+
+```
+
+#### Extract Date Features (Month, Year, Day)
+
+```{r}
+str(Barcelona_1$time)
+```
+
+```{r}
+Barcelona_1$year <- format(Barcelona_1$time, "%Y")
+Barcelona_1$month <- format(Barcelona_1$time, "%m")
+Barcelona_1$day <- format(Barcelona_1$time, "%d")
+Barcelona_1$day_of_the_week <-format(Barcelona_1$time, "%a")
+```
+
+##### Seasons in Spain link:  <https://seasonsyear.com/Spain/Barcelona>
+
+```{r}
+Barcelona_1$season <- ifelse(Barcelona_1$month>=3 & Barcelona_1$month<=5, "Spring",
+                             ifelse(Barcelona_1$month>=6 & Barcelona_1$month<=8, "Summer",
+                                    ifelse(Barcelona_1$month>=9 & Barcelona_1$month<=11, "Fall","Winter")))
+```
+
+```{r}
+view(Barcelona_1)
+```
 
 ## Bayesian Method
 
