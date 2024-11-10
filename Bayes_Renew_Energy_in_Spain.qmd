@@ -93,36 +93,41 @@ view(df_zero_na)
 #### Remove other columns such as city_name and have only zero/NA values
 
 ```{r}
-Barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, 
-                                                          generation.hydro.pumped.storage.aggregated, 
-                                                          forecast.wind.offshore.eday.ahead, rain_1h,
-                                                          rain_3h, snow_3h))
+barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, `generation hydro pumped storage aggregated`, `forecast wind offshore eday ahead`, rain_1h, rain_3h, snow_3h))
 
 ```
 
 #### Extract Date Features (Month, Year, Day)
 
 ```{r}
-str(Barcelona_1$time)
+str(barcelona_1$time)
 ```
 
 ```{r}
-Barcelona_1$year <- format(Barcelona_1$time, "%Y")
-Barcelona_1$month <- format(Barcelona_1$time, "%m")
-Barcelona_1$day <- format(Barcelona_1$time, "%d")
-Barcelona_1$day_of_the_week <-format(Barcelona_1$time, "%a")
+barcelona_1$year <- format(barcelona_1$time, "%Y")
+barcelona_1$month <- format(barcelona_1$time, "%m")
+barcelona_1$day <- format(barcelona_1$time, "%d")
+barcelona_1$day_of_the_week <-format(barcelona_1$time, "%a")
 ```
 
-##### Seasons in Spain link:  <https://seasonsyear.com/Spain/Barcelona>
+##### Seasons in Spain link: <https://seasonsyear.com/Spain/Barcelona>
 
 ```{r}
-Barcelona_1$season <- ifelse(Barcelona_1$month>=3 & Barcelona_1$month<=5, "Spring",
-                             ifelse(Barcelona_1$month>=6 & Barcelona_1$month<=8, "Summer",
-                                    ifelse(Barcelona_1$month>=9 & Barcelona_1$month<=11, "Fall","Winter")))
+barcelona_1$season <- ifelse(barcelona_1$month>=3 & barcelona_1$month<=5, "Spring",
+                             ifelse(Barcelona_1$month>=6 & barcelona_1$month<=8, "Summer",
+                                    ifelse(barcelona_1$month>=9 & barcelona_1$month<=11, "Fall","Winter")))
 ```
 
+```{r, warning = FALSE, message=FALSE}
+view(barcelona_1)
+```
+
+#### Removing row with 2014 data value
+
+##### Since their is only one value for the year `2014` we decided to remove that row
+
 ```{r}
-view(Barcelona_1)
+barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
 ```
 
 ## Bayesian Method
