@@ -114,7 +114,6 @@ barcelona_1$day_of_the_week <- format(barcelona_1$time, "%a")
 ```{r}
 # Converting columns to numerical items
 barcelona_1 <- transform(barcelona_1,
-                         year = as.numeric(year),
                          month = as.numeric(month),
                          day = as.numeric(day))
 ```
@@ -177,9 +176,6 @@ ggplot(data = barcelona_1, aes(x = `price actual`, y = `total load actual`)) +
 Mutliple Box Plots that look at Total Load Actual by Month, Days of the Week, and Season
 
 ```{r}
-ggplot(data = barcelona_1, aes(x = month, y = `total load actual`, fill = month)) +
-  geom_boxplot()
-
 ggplot(data = barcelona_1, aes(x = day_of_the_week, y = `total load actual`, fill = day_of_the_week)) +
   geom_boxplot()
 
