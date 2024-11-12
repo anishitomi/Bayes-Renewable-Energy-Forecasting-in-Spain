@@ -383,6 +383,19 @@ mcmc_dens(prediction) +
   xlab("new prediction of rides")
 ```
 
+#### Bayesian Non-Renewable Energy 
+
+```{r}
+barcelona_renewable_energy_sources <- stan_glm( 
+  `total load actual` ~ `generation biomass` + `generation other renewable` + `generation nuclear`+ `generation solar` + `generation wind onshore`,
+  data = barcelona_1,
+  family = gaussian(),  # ensure this is a function call for the Gaussian family
+  chains = 4, 
+  iter = 5000, 
+  seed = 84735
+)
+```
+
 ## Answering the Following Questions
 
 ## 
