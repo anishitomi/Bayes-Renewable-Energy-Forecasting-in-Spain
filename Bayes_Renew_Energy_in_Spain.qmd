@@ -108,7 +108,15 @@ str(barcelona_1$time)
 barcelona_1$year <- format(barcelona_1$time, "%Y")
 barcelona_1$month <- format(barcelona_1$time, "%m")
 barcelona_1$day <- format(barcelona_1$time, "%d")
-barcelona_1$day_of_the_week <-format(barcelona_1$time, "%a")
+barcelona_1$day_of_the_week <- format(barcelona_1$time, "%a")
+```
+
+```{r}
+# Converting columns to numerical items
+barcelona_1 <- transform(barcelona_1,
+                         year = as.numeric(year),
+                         month = as.numeric(month),
+                         day = as.numeric(day))
 ```
 
 ##### Seasons in Spain link: <https://seasonsyear.com/Spain/Barcelona>
