@@ -25,6 +25,8 @@ library(bayesplot)
 library(broom.mixed)
 library(ggpubr)
 library(corrplot)
+library(car)
+library(rstanarm)
 ```
 
 ## Reading in Data
@@ -88,7 +90,6 @@ df_zero <- as.data.frame(colSums(barcelona_weather_data==0))
 
 ```{r}
 df_zero_na <- cbind(df_na, df_zero)
-view(df_zero_na)
 ```
 
 #### Remove other columns such as city_name and have only zero/NA values
@@ -96,6 +97,12 @@ view(df_zero_na)
 ```{r}
 barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, temp_min, temp_max, weather_id, `generation hydro pumped storage aggregated`, `forecast wind offshore eday ahead`, rain_1h, rain_3h, snow_3h))
 
+```
+
+#### Removing rows with NA values
+
+```{r}
+barcelona_1 <- na.omit(barcelona_1)
 ```
 
 #### Extract Date Features (Month, Year, Day)
@@ -162,10 +169,15 @@ ggplot(data = barcelona_1, aes(x = year, y = `forecast wind onshore day ahead`, 
 ```
 
 ```{r}
-ggplot(data = barcelona_1, aes(x = `price actual`, y = `total load actual`)) +
-  geom_point() +
-  stat_smooth(method = "lm") +
-  stat_cor()
+ggplot(data = barcelona_1, aes(x = `total load actual`, y = `generation solar`)) +
+  geom_hex() +
+  stat_smooth(method = "lm") 
+```
+
+```{r}
+ggplot(data = barcelona_1, aes(x = `price actual`, y = `generation solar`)) +
+  geom_hex() +
+  stat_smooth(method = "lm") 
 ```
 
 Mutliple Box Plots that look at Total Load Actual by Month, Days of the Week, and Season
@@ -178,7 +190,198 @@ ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = seaso
   geom_boxplot()
 ```
 
+## Features Importance
+
+#### Correlations
+
+```{r}
+barcelona_cor <- barcelona_1 %>% 
+  select(where(is.numeric)) %>% 
+  select(-c(...1))
+
+cor_total <- cor(barcelona_cor)
+
+png(filename = "total_corrplot.png", width = 1200, height = 800)
+
+corrplot(cor_total, method = "number")
+
+#dev.off()
+```
+
+#### Remove more columns that do not show values in correlation matrix
+
+```{r}
+colnames(barcelona_cor)
+```
+
+```{r}
+barcelona_new_cor <- barcelona_cor %>% 
+  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+            `generation fossil peat`,`generation geothermal`,`generation marine`,
+            `generation wind offshore`))
+```
+
+```{r}
+png(filename = "total_new_corrplot.png", width = 1500, height = 1200)
+
+corrplot(cor(barcelona_new_cor), method = "number", type="lower", tl.srt = 45)
+
+dev.off()
+```
+
+#### Use lm() and identify columns that have a statistical significance with 'total load actual' based on columns that have correlation
+
+```{r}
+colnames(barcelona_new_cor)
+```
+
+```{r}
+lm_model <- lm(`total load actual` ~ `generation fossil brown coal/lignite`+
+                 `generation fossil gas` + `generation fossil hard coal` +
+                 `generation fossil oil` + `generation hydro water reservoir` +
+                 `generation solar`, data = barcelona_1)
+
+lm_df <- summary(lm_model)
+```
+
+```{r}
+lm_df_tidy <- tidy(lm_df)
+head(lm_df_tidy)
+
+lm_df_tidy_significant <- lm_df_tidy %>% 
+  filter(p.value < 0.05)
+
+view(lm_df_tidy_significant)
+```
+
+```{r}
+barcelona_new <- barcelona_1 %>% 
+  select(`generation fossil gas`,`generation fossil hard coal`,
+         `generation fossil oil`, `generation hydro water reservoir`, 
+         `generation solar`,`total load actual`)
+```
+
+```{r}
+lm_model <- lm(`total load actual` ~ ., data = barcelona_new)
+
+summary(lm_model)
+```
+
+#### Check for multicollinearity (should be after correlation)
+
+```{r}
+vif(lm_model)
+```
+
+#### Use lm() and identify columns that have a statistical significance with 'generation wind onshore'
+
+```{r}
+summary(barcelona_1$`generation wind onshore`)
+summary(barcelona_1$`generation wind offshore`)
+```
+
+```{r}
+lm_wind <- lm(`generation wind onshore` ~ ., data = barcelona_1)
+
+lm_wind_model <- summary(lm_wind)
+
+lm_wind_tidy <- tidy(lm_wind_model)
+
+lm_wind_tidy_significant <- lm_wind_tidy %>% 
+  filter(p.value < 0.05)
+
+#view(lm_wind_tidy_significant)
+```
+
+#### Use lm() and identify columns that have a statistical significance with 'generation solar'
+
+```{r}
+lm_solar <- lm(`generation solar` ~ ., data = barcelona_1)
+
+lm_solar_model <- summary(lm_solar)
+
+lm_solar_tidy <- tidy(lm_solar_model)
+
+lm_solar_tidy_significant <- lm_solar_tidy %>% 
+  filter(p.value < 0.05)
+
+#view(lm_solar_tidy_significant)
+```
+
+```{r}
+summary(lm_solar)
+```
+
+Density Plot
+
+```{r}
+ggplot(barcelona_1, aes(x = `total load actual`)) +
+  geom_density(alpha = 0.6, fill = "navy")
+```
+
 ## Bayesian Method
+
+#### Bayesian Approach using stan_glm()
+
+```{r}
+barcelona_model <- stan_glm(
+  `total load actual` ~ `generation fossil gas`,
+  data = barcelona_1,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+Bayesian Regression Model
+
+```{r}
+summary(barcelona_1$`generation fossil oil shale`)
+```
+
+#### Bayesian Non-Renewable Energy (Neris Start Here)
+
+This model will render. Need you to try and print out speific results with "new data." Use the Bayesian Linear Regression Lecture
+
+```{r}
+barcelona_non_renewable_energy_sources <- stan_glm( 
+  `total load actual` ~ `generation fossil brown coal/lignite` +
+  `generation fossil hard coal` + `generation fossil gas` + `generation fossil oil` + `generation nuclear`,
+  data = barcelona_1,
+  family = gaussian(),  # ensure this is a function call for the Gaussian family
+  chains = 4, 
+  iter = 5000, 
+  seed = 84735
+)
+```
+
+```{r}
+new_data_for_prediction <- data.frame(
+  temp_feel = 75, 
+  temp_actual = 70,
+  season = "summer",      
+  year = 2011,           
+  month = "Sep",             
+  day_of_week = "Wed", 
+  weekend = FALSE,           
+  holiday = "yes",            
+  humidity = 53.6667,      
+  windspeed = 16,        
+  weather_cat = "categ1"   
+)
+```
+
+```{r}
+prediction <- 
+  posterior_predict(bike_model_all, newdata = new_data_for_prediction)
+```
+
+```{r}
+mcmc_dens(prediction) + 
+  xlab("new prediction of rides")
+```
 
 ## Answering the Following Questions
 
