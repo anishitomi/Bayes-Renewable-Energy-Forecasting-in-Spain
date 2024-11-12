@@ -154,16 +154,11 @@ barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
 Plot that looks at the amount of waste generated each year in Barcelona
 
 ```{r}
-ggplot(data = barcelona_1, aes(x = year, y = `generation waste`, fill = year)) +
+ggplot(data = barcelona_1, aes(x = year, y = `generation solar`, fill = year)) +
   geom_boxplot() 
-```
 
-```{r}
-ggplot(barcelona_1, aes(x = time, y = `generation biomass`, color = year, group = year)) +
-  geom_line(size = .25) +
-  labs(title = "Time Series of Value by Year", x = "Date", y = "Generation of Biomass") +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1")  # Choose a color palette
+ggplot(data = barcelona_1, aes(x = year, y = `forecast wind onshore day ahead`, fill = year)) +
+  geom_boxplot() 
 ```
 
 ```{r}
