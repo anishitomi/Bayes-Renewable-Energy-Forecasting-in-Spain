@@ -383,7 +383,7 @@ mcmc_dens(prediction) +
   xlab("new prediction of rides")
 ```
 
-#### Bayesian Non-Renewable Energy 
+#### Bayesian Non-Renewable Energy
 
 ```{r}
 barcelona_renewable_energy_sources <- stan_glm( 
@@ -396,6 +396,85 @@ barcelona_renewable_energy_sources <- stan_glm(
 )
 ```
 
-## Answering the Following Questions
+#### Total Output Demand Model
 
-## 
+```{r}
+demand_df <- barcelona_1 %>% 
+  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+            `generation fossil peat`, `generation geothermal`, `generation marine`, 
+            `generation wind offshore`))
+
+demand_model <- stan_glm(
+  `total load actual` ~ `generation fossil brown coal/lignite`+
+                 `generation fossil gas` + `generation fossil hard coal` +
+                 `generation fossil oil` + `generation hydro water reservoir` +
+                 `generation solar` + wind_speed + temp + month + day,
+  data = demand_df,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+#### Renewable Sources Model
+
+```{r}
+renewable_model <- stan_glm(
+  `generation wind onshore` ~ `generation hydro pumped storage consumption` + wind_speed,
+  data = demand_df,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+#### New Data
+
+```{r}
+new_data <- data.frame(`generation fossil brown coal/lignite` = 300,
+                       `generation fossil gas` = 231,
+                       `generation fossil hard coal` = 213,
+                       `generation fossil oil` = 123,
+                       `generation hydro water reservoir` = 1233,
+                       `generation solar` = 145,
+                       `generation hydro pumped storage consumption` = 1000,
+                       wind_speed = 12,
+                       temp = 65,
+                       month = 12,
+                       day = 3,
+                       check.names = FALSE)
+```
+
+#### Forecast Total Demand and Renewable Sources Supply Calculation
+
+```{r}
+demand_forecast <- posterior_predict(demand_model, newdata = new_data)
+
+renewable_forecast <- posterior_predict(renewable_model, newdata = new_data)
+
+gap_forecast <- demand_forecast - renewable_forecast
+```
+
+#### Forecast Total Demand and Renewable Sources Supply Visualization
+
+```{r}
+demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
+                                 y = density(demand_forecast)$y)
+
+
+renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
+                                 y = density(renewable_forecast)$y)
+
+gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
+                                 y = density(gap_forecast)$y)
+
+ggplot() +
+  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.25,  data = demand_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "gold", alpha = 0.25,  data = gap_forecast_df) +
+  theme_minimal()
+```
