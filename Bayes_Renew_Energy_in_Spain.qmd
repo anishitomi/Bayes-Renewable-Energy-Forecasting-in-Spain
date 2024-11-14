@@ -341,60 +341,132 @@ Bayesian Regression Model
 summary(barcelona_1$`generation fossil oil shale`)
 ```
 
-#### Bayesian Non-Renewable Energy (Neris Start Here)
+\-\--
 
-This model will render. Need you to try and print out speific results with "new data." Use the Bayesian Linear Regression Lecture
+#### Bayesian Non-Renewable Energy
 
 ```{r}
-barcelona_non_renewable_energy_sources <- stan_glm( 
-  `total load actual` ~ `generation fossil brown coal/lignite` +
-  `generation fossil hard coal` + `generation fossil gas` + `generation fossil oil` + `generation nuclear`,
+barcelona_non_renewable_energy_sources <- 
+  stan_glm(total.load.actual ~ generation.fossil.brown.coal.lignite +
+  generation.fossil.hard.coal + generation.fossil.gas + generation.fossil.oil + generation.nuclear,
   data = barcelona_1,
-  family = gaussian(),  # ensure this is a function call for the Gaussian family
+  family = gaussian(),
   chains = 4, 
   iter = 5000, 
-  seed = 84735
+  seed = 84734
 )
 ```
 
 ```{r}
-new_data_for_prediction <- data.frame(
-  temp_feel = 75, 
-  temp_actual = 70,
-  season = "summer",      
-  year = 2011,           
-  month = "Sep",             
-  day_of_week = "Wed", 
-  weekend = FALSE,           
-  holiday = "yes",            
-  humidity = 53.6667,      
-  windspeed = 16,        
-  weather_cat = "categ1"   
+summary(barcelona_1$generation.fossil.brown.coal.lignite)
+summary(barcelona_1$generation.fossil.hard.coal)
+summary(barcelona_1$generation.fossil.gas)
+summary(barcelona_1$generation.fossil.oil)
+summary(barcelona_1$generation.nuclear)
+```
+
+```{r}
+new_data_for_prediction_nonrenewable <- data.frame(
+  generation.fossil.brown.coal.lignite = 448.5,  # mean value
+  generation.fossil.hard.coal = 4257,            # mean value
+  generation.fossil.gas = 5624,                  # mean value
+  generation.fossil.oil = 298.2,                 # mean value
+  generation.nuclear = 6265                      # mean value
 )
 ```
 
 ```{r}
 prediction <- 
-  posterior_predict(bike_model_all, newdata = new_data_for_prediction)
+  posterior_predict(barcelona_non_renewable_energy_sources, newdata = new_data_for_prediction_nonrenewable)
 ```
 
 ```{r}
-mcmc_dens(prediction) + 
-  xlab("new prediction of rides")
+mcmc_dens(prediction) + xlab("prediction_of_nonrewnewable_resources")
 ```
 
-#### Bayesian Non-Renewable Energy
+```{r}
+library(ggplot2)
+library(ggdist)
+
+## step 1: extract the predictions from model!
+
+prediction_values <- as.vector(prediction)
+
+# step 2: plot both the original density and new density together
+ggplot() +
+
+  geom_density(data = barcelona_1, aes(x = total.load.actual), 
+               fill = "navy", alpha = 0.6) +
+  geom_density(aes(x = prediction_values), 
+               fill = "red", alpha = 0.4) +
+  xlab("total.load.actual") +
+  ylab("Density") +
+  ggtitle("Comparison of Actual vs Predicted", subtitle = "Non-Renewable Energy Resources") +
+  theme_minimal()
+```
+
+#### Bayesian Renewable Energy
 
 ```{r}
 barcelona_renewable_energy_sources <- stan_glm( 
-  `total load actual` ~ `generation biomass` + `generation other renewable` + `generation nuclear`+ `generation solar` + `generation wind onshore`,
+  total.load.actual ~ generation.biomass + generation.other.renewable + generation.nuclear + generation.solar + generation.wind.onshore,
   data = barcelona_1,
   family = gaussian(),  # ensure this is a function call for the Gaussian family
   chains = 4, 
   iter = 5000, 
-  seed = 84735
+  seed = 84736
 )
 ```
+
+```{r}
+summary(barcelona_1$generation.biomass)
+summary(barcelona_1$generation.other.renewable)
+summary(barcelona_1$generation.nuclear)
+summary(barcelona_1$generation.solar)
+summary(barcelona_1$generation.wind.onshore)
+```
+
+```{r}
+new_data_for_prediction_renewable <- data.frame(
+  generation.biomass = 383.2,               # mean value
+  generation.other.renewable = 85.72,       # mean value 
+  generation.nuclear = 6265,                # mean value 
+  generation.solar = 1429.6,                # mean value 
+  generation.wind.onshore = 5475            # mean value 
+)
+```
+
+```{r}
+prediction <- 
+  posterior_predict(barcelona_renewable_energy_sources, newdata = new_data_for_prediction_renewable)
+```
+
+```{r}
+mcmc_dens(prediction) + xlab("prediction_of_rewnewable_resources")
+```
+
+```{r}
+library(ggplot2)
+library(ggdist)
+
+## step 1: extract the predictions from model!
+
+prediction_values <- as.vector(prediction)
+
+# step 2: plot both the original density and new density together
+ggplot() +
+
+  geom_density(data = barcelona_1, aes(x = total.load.actual), 
+               fill = "navy", alpha = 0.6) +
+  geom_density(aes(x = prediction_values), 
+               fill = "red", alpha = 0.4) +
+  xlab("total.load.actual") +
+  ylab("Density") +
+  ggtitle("Comparison of Actual vs Predicted", subtitle = "Renewable Energy Sources") +
+  theme_minimal()
+```
+
+\-\--
 
 #### Total Output Demand Model
 
