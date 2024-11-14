@@ -596,3 +596,7 @@ ggplot() +
   geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.6,  data = original_df) + 
   theme_minimal() 
 ```
+
+```{r}
+str(energy_weather_data)
+```
