@@ -32,8 +32,8 @@ library(rstanarm)
 ## Reading in Data
 
 ```{r}
-energy_data <- read_csv("Data/energy_dataset.csv")
-weather_features_data <- read_csv("Data/weather_features.csv")
+energy_data <- read_csv("energy_dataset.csv")
+weather_features_data <- read_csv("weather_features.csv")
 ```
 
 ## Joining the Data Frames Together
@@ -59,6 +59,7 @@ write.csv(energy_weather_data, "energy_weather_data")
 ```{r}
 energy_weather_data <- read_csv("energy_weather_data")
 dim(energy_weather_data)
+str(energy_weather_data)
 ```
 
 #### Filter for Barcelona
@@ -72,6 +73,7 @@ barcelona_weather_data <- energy_weather_data %>%
 
 ```{r}
 dim(barcelona_weather_data)
+str(barcelona_weather_data)
 ```
 
 #### Count columns that have too much `zeros` or `NAs`
@@ -122,7 +124,11 @@ barcelona_1$day_of_the_week <- format(barcelona_1$time, "%a")
 # Converting columns to numerical items
 barcelona_1 <- transform(barcelona_1,
                          month = as.numeric(month),
-                         day = as.numeric(day))
+                         day = as.numeric(day),check.names = FALSE)
+
+# x<- gsub(".", " ", colnames(as.data.frame(barcelona_1)))
+
+names(barcelona_1) <- gsub(".", " ", names(barcelona_1), fixed = TRUE)
 ```
 
 ##### Seasons in Spain link: <https://seasonsyear.com/Spain/Barcelona>
@@ -197,7 +203,7 @@ ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = seaso
 ```{r}
 barcelona_cor <- barcelona_1 %>% 
   select(where(is.numeric)) %>% 
-  select(-c(...1))
+  select(-c(1))
 
 cor_total <- cor(barcelona_cor)
 
@@ -216,7 +222,7 @@ colnames(barcelona_cor)
 
 ```{r}
 barcelona_new_cor <- barcelona_cor %>% 
-  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+  select(-c(`generation fossil coal derived gas`,`generation fossil oil shale`,
             `generation fossil peat`,`generation geothermal`,`generation marine`,
             `generation wind offshore`))
 ```
@@ -236,7 +242,7 @@ colnames(barcelona_new_cor)
 ```
 
 ```{r}
-lm_model <- lm(`total load actual` ~ `generation fossil brown coal/lignite`+
+lm_model <- lm(`total load actual` ~ `generation fossil brown coal lignite`+
                  `generation fossil gas` + `generation fossil hard coal` +
                  `generation fossil oil` + `generation hydro water reservoir` +
                  `generation solar`, data = barcelona_1)
@@ -347,8 +353,8 @@ summary(barcelona_1$`generation fossil oil shale`)
 
 ```{r}
 barcelona_non_renewable_energy_sources <- 
-  stan_glm(total.load.actual ~ generation.fossil.brown.coal.lignite +
-  generation.fossil.hard.coal + generation.fossil.gas + generation.fossil.oil + generation.nuclear,
+  stan_glm(`total load actual` ~ `generation fossil brown coal lignite` +
+  `generation fossil hard coal` + `generation fossil gas` + `generation fossil oil` + `generation nuclear`,
   data = barcelona_1,
   family = gaussian(),
   chains = 4, 
@@ -358,26 +364,32 @@ barcelona_non_renewable_energy_sources <-
 ```
 
 ```{r}
-summary(barcelona_1$generation.fossil.brown.coal.lignite)
-summary(barcelona_1$generation.fossil.hard.coal)
-summary(barcelona_1$generation.fossil.gas)
-summary(barcelona_1$generation.fossil.oil)
-summary(barcelona_1$generation.nuclear)
+summary(barcelona_1$`generation fossil brown coal lignite`)
+summary(barcelona_1$`generation fossil hard coal`)
+summary(barcelona_1$`generation fossil gas`)
+summary(barcelona_1$`generation fossil oil`)
+summary(barcelona_1$`generation nuclear`)
 ```
 
 ```{r}
+
+# Creating a new data frame with appropriate column names
 new_data_for_prediction_nonrenewable <- data.frame(
-  generation.fossil.brown.coal.lignite = 448.5,  # mean value
-  generation.fossil.hard.coal = 4257,            # mean value
-  generation.fossil.gas = 5624,                  # mean value
-  generation.fossil.oil = 298.2,                 # mean value
-  generation.nuclear = 6265                      # mean value
+  `generation fossil brown coal lignite` = 448.5,  # mean value
+  `generation fossil hard coal` = 4257,            # mean value
+  `generation fossil gas` = 5624,                  # mean value
+  `generation fossil oil` = 298.2,                 # mean value
+  `generation nuclear` = 6265,
+  check.names = FALSE
 )
+
+
 ```
 
 ```{r}
 prediction <- 
-  posterior_predict(barcelona_non_renewable_energy_sources, newdata = new_data_for_prediction_nonrenewable)
+  posterior_predict(barcelona_non_renewable_energy_sources, newdata =
+                      new_data_for_prediction_nonrenewable)
 ```
 
 ```{r}
@@ -395,7 +407,7 @@ prediction_values <- as.vector(prediction)
 # step 2: plot both the original density and new density together
 ggplot() +
 
-  geom_density(data = barcelona_1, aes(x = total.load.actual), 
+  geom_density(data = barcelona_1, aes(x = `total load actual`), 
                fill = "navy", alpha = 0.6) +
   geom_density(aes(x = prediction_values), 
                fill = "red", alpha = 0.4) +
@@ -409,7 +421,7 @@ ggplot() +
 
 ```{r}
 barcelona_renewable_energy_sources <- stan_glm( 
-  total.load.actual ~ generation.biomass + generation.other.renewable + generation.nuclear + generation.solar + generation.wind.onshore,
+  `total load actual` ~ `generation biomass` + `generation other renewable` + `generation nuclear` + `generation solar` + `generation wind onshore`,
   data = barcelona_1,
   family = gaussian(),  # ensure this is a function call for the Gaussian family
   chains = 4, 
@@ -419,20 +431,21 @@ barcelona_renewable_energy_sources <- stan_glm(
 ```
 
 ```{r}
-summary(barcelona_1$generation.biomass)
-summary(barcelona_1$generation.other.renewable)
-summary(barcelona_1$generation.nuclear)
-summary(barcelona_1$generation.solar)
-summary(barcelona_1$generation.wind.onshore)
+summary(barcelona_1$`generation biomass`)
+summary(barcelona_1$`generation other renewable`)
+summary(barcelona_1$`generation nuclear`)
+summary(barcelona_1$`generation solar`)
+summary(barcelona_1$`generation wind onshore`)
 ```
 
 ```{r}
 new_data_for_prediction_renewable <- data.frame(
-  generation.biomass = 383.2,               # mean value
-  generation.other.renewable = 85.72,       # mean value 
-  generation.nuclear = 6265,                # mean value 
-  generation.solar = 1429.6,                # mean value 
-  generation.wind.onshore = 5475            # mean value 
+  `generation biomass` = 383.2,               # mean value
+  `generation other renewable` = 85.72,       # mean value 
+  `generation nuclear` = 6265,                # mean value 
+  `generation solar` = 1429.6,                # mean value 
+  `generation wind onshore` = 5475,            # mean value 
+  check.names = FALSE 
 )
 ```
 
@@ -456,7 +469,7 @@ prediction_values <- as.vector(prediction)
 # step 2: plot both the original density and new density together
 ggplot() +
 
-  geom_density(data = barcelona_1, aes(x = total.load.actual), 
+  geom_density(data = barcelona_1, aes(x = `total load actual`), 
                fill = "navy", alpha = 0.6) +
   geom_density(aes(x = prediction_values), 
                fill = "red", alpha = 0.4) +
@@ -472,12 +485,12 @@ ggplot() +
 
 ```{r}
 demand_df <- barcelona_1 %>% 
-  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+  select(-c(`generation fossil coal derived gas`,`generation fossil oil shale`,
             `generation fossil peat`, `generation geothermal`, `generation marine`, 
             `generation wind offshore`))
 
 demand_model <- stan_glm(
-  `total load actual` ~ `generation fossil brown coal/lignite`+
+  `total load actual` ~ `generation fossil brown coal lignite`+
                  `generation fossil gas` + `generation fossil hard coal` +
                  `generation fossil oil` + `generation hydro water reservoir` +
                  `generation solar` + wind_speed + temp + month + day,
@@ -504,13 +517,24 @@ renewable_model <- stan_glm(
 )
 ```
 
-#### New Data
+#### New Data (Need to include non renewable and renewable energey sources)
 
 ```{r}
-new_data <- data.frame(`generation fossil brown coal/lignite` = 300,
+
+forecast_df <- data.frame(`generation fossil brown coal lignite` = 300,
                        `generation fossil gas` = 231,
                        `generation fossil hard coal` = 213,
                        `generation fossil oil` = 123,
+                       `generation hydro water reservoir` = 1233,
+                       `generation solar` = 145,
+                       `generation hydro pumped storage consumption` = 1000,
+                       wind_speed = 12,
+                       temp = 65,
+                       month = 12,
+                       day = 3,
+                       check.names = FALSE)
+
+renewable_df <- data.frame(
                        `generation hydro water reservoir` = 1233,
                        `generation solar` = 145,
                        `generation hydro pumped storage consumption` = 1000,
@@ -524,9 +548,9 @@ new_data <- data.frame(`generation fossil brown coal/lignite` = 300,
 #### Forecast Total Demand and Renewable Sources Supply Calculation
 
 ```{r}
-demand_forecast <- posterior_predict(demand_model, newdata = new_data)
+demand_forecast <- posterior_predict(demand_model, newdata = forecast_df )
 
-renewable_forecast <- posterior_predict(renewable_model, newdata = new_data)
+renewable_forecast <- posterior_predict(renewable_model, newdata = renewable_df)
 
 gap_forecast <- demand_forecast - renewable_forecast
 ```
@@ -549,4 +573,26 @@ ggplot() +
   geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
   geom_area(aes(x=x ,y=y), fill = "gold", alpha = 0.25,  data = gap_forecast_df) +
   theme_minimal()
+```
+
+```{r}
+
+demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
+                                 y = density(demand_forecast)$y)
+
+
+renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
+                                 y = density(renewable_forecast)$y)
+
+gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
+                                 y = density(gap_forecast)$y)
+
+original_df <- data.frame(x = density(barcelona_1$`total load actual`)$x, 
+                                 y = density(barcelona_1$`total load actual`)$y)
+
+ggplot() +
+  geom_area(aes(x=x ,y=y), fill = "red", alpha = 0.25,  data = demand_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.6,  data = original_df) + 
+  theme_minimal() 
 ```
