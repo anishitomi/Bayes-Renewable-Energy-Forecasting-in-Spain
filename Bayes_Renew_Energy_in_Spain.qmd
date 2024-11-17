@@ -31,23 +31,23 @@ library(rstanarm)
 
 ## Reading in Data
 
-```{r}
-energy_data <- read_csv("energy_dataset.csv")
-weather_features_data <- read_csv("weather_features.csv")
+```{r, warning = FALSE, message=FALSE}
+energy_data <- read_csv("Data/energy_dataset.csv")
+weather_features_data <- read_csv("Data/weather_features.csv")
 ```
 
 ## Joining the Data Frames Together
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 names(weather_features_data)[names(weather_features_data) == "dt_iso"] <- "time"
 str(weather_features_data)
 ```
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 energy_weather_data <- merge(energy_data, weather_features_data, by = c("time"))
 ```
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 # Writing a New CSV File
 write.csv(energy_weather_data, "energy_weather_data")
 ```
@@ -56,10 +56,8 @@ write.csv(energy_weather_data, "energy_weather_data")
 
 #### Exploring Combined Dataset
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 energy_weather_data <- read_csv("energy_weather_data")
-dim(energy_weather_data)
-str(energy_weather_data)
 ```
 
 #### Filter for Barcelona
@@ -73,7 +71,6 @@ barcelona_weather_data <- energy_weather_data %>%
 
 ```{r}
 dim(barcelona_weather_data)
-str(barcelona_weather_data)
 ```
 
 #### Count columns that have too much `zeros` or `NAs`
@@ -150,10 +147,6 @@ This unique function is to just explore different values in certain columns of t
 sort(unique(barcelona_1$season))
 ```
 
-```{r, warning = FALSE, message=FALSE}
-view(barcelona_1)
-```
-
 #### Removing row with 2014 data value
 
 ##### Since their is only one value for the year `2014` we decided to remove that row
@@ -167,29 +160,18 @@ barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
 Plot that looks at the amount of waste generated each year in Barcelona
 
 ```{r}
-ggplot(data = barcelona_1, aes(x = year, y = `generation solar`, fill = year)) +
-  geom_boxplot() 
-
-ggplot(data = barcelona_1, aes(x = year, y = `forecast wind onshore day ahead`, fill = year)) +
-  geom_boxplot() 
-```
-
-```{r}
-ggplot(data = barcelona_1, aes(x = `total load actual`, y = `generation solar`)) +
-  geom_hex() +
-  stat_smooth(method = "lm") 
-```
-
-```{r}
 ggplot(data = barcelona_1, aes(x = `price actual`, y = `generation solar`)) +
   geom_hex() +
   stat_smooth(method = "lm") 
 ```
 
-Mutliple Box Plots that look at Total Load Actual by Month, Days of the Week, and Season
+Multiple Box Plots that look at Total Load Actual by Days of the Week, Year, and Season
 
 ```{r}
 ggplot(data = barcelona_1, aes(x = day_of_the_week, y = `total load actual`, fill = day_of_the_week)) +
+  geom_boxplot()
+
+ggplot(data = barcelona_1, aes(x = year, y = `total load actual`, fill = year)) +
   geom_boxplot()
 
 ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = season)) +
@@ -347,7 +329,7 @@ Bayesian Regression Model
 summary(barcelona_1$`generation fossil oil shale`)
 ```
 
-\-\--
+---
 
 #### Bayesian Non-Renewable Energy
 
@@ -479,7 +461,7 @@ ggplot() +
   theme_minimal()
 ```
 
-\-\--
+---
 
 #### Total Output Demand Model
 
