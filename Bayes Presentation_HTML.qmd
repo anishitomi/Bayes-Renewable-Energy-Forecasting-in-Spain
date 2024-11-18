@@ -21,7 +21,7 @@ The objectives are:
 
 -   **Datasets:** The first dataset is a 35,064 row and 29 column sheet comprised of different energy source variables and the total load output. The second dataset is a 178,396 row and 17 column sheet comprised of weather features.
 
--   **Data Preparation**: The datasets were combined and filtered for the city of Barcelona, removed NA values and removed columns that had zero values. We also extracted relevant temporal features like season, month and day of the week. The final dataset is a 35,428 row and 42 column sheet.
+-   **Data Preparation**: The datasets were combined and filtered for the city of Barcelona, removed NA values and removed columns that had zero values. We also extracted relevant temporal features like season, month and day of the week. We selected data ranging from 2015 to 2018. The final dataset is a 35,428 row and 42 column sheet.
 
 -   **Bayesian Approach**: Leverage Bayesian modeling to incorporate prior knowledge, quantify uncertainty, and provide probabilistic predictions for more reliable insights.
 
@@ -153,25 +153,98 @@ barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
 ## Insights
 
 ::: panel-tabset
-### Plot 1
+### Correlation
 
-```{r}
+Initially, using a correlation plot aided in the selection of important variables to show any relationship on our target variables of Total Energy Load Output, Solar Energy Load Output and Wind Energy Load Output. Moreover, we intuitively added variables that we believe could strengthen our Bayesian model to forecast Energy Load Outputs. ![](total_new_corrplot.png)
+
+```{r, include = FALSE}
 ggplot(data = barcelona_1, aes(x = `price actual`, y = `generation solar`)) +
   geom_hex() +
   stat_smooth(method = "lm") 
 ```
 
-### Plot 2
-
 ```{r}
+?geom_density
+```
+
+
+### Energy Consumption Distribution
+
+The graph shows the energy consumption distribution of Barcelona, Spain between 2015 and 2018. The mean energy consumption is at 28,705 MWH. However, possible values range between 18,041 MWH and 41,015 MWH. 
+
+Using Bayes, we are trying to achieve a more certain probability of a range of values and eventually narrow down the ~23,000 MWH gap of energy consumption. 
+```{r}
+summary(barcelona_1$`total load actual`)
+
+ggplot(barcelona_1, aes(x = `total load actual`)) +
+  geom_density(alpha = 0.25, fill = "navy") +
+  geom_vline(aes(xintercept = mean(`total load actual`)), 
+             color = "gold", size = 0.25) +
+  labs(x = "Total Energy Output") +
+  labs(y = "Total Energy Output") +
+  theme_classic()
+```
+### Energy Output Over Time
+
+This plot gives us a general idea of the energy output in Spain from 2015 to 2018 between non-renewable and renewable energy sources. Non-renewable sources trend line show a slow upward slope while renewable sources trend line show a slow downward slope.
+
+```{r, echo = FALSE}
+barcelona_1$renewable_output_sum <- rowSums(select(barcelona_1, `generation biomass`, `generation other renewable`, `generation nuclear`, `generation solar`, `generation wind onshore`), na.rm = TRUE)
+
+ggplot() +
+  geom_line(aes(x = time, y  = `total load actual`, color = "navy"),  alpha = 0.25, data = barcelona_1) + 
+  geom_smooth(aes(x = time, y = `total load actual`), method = "lm", data = barcelona_1, size = 0.5, color = "gold") +
+  geom_line(aes(x = time, y = renewable_output_sum, color = "green"),alpha = 0.25, data = barcelona_1) + 
+  geom_smooth(aes(x = time, y = renewable_output_sum), method = "lm", data = barcelona_1, size = 0.5, color = "gray") +
+  scale_color_identity(name = NULL, labels = c(navy = "Non-Renewable", green = "Renewable"), guide = "legend") +
+  labs(x = "Year") +
+  labs(y = "Total Energy Output") +
+  theme_classic()
+
+```
+### Average Energy Output per Month
+
+This plot shows in any given year between 2015 and 2018, the energy consumption of Barcelona tends to decrease from January to December. During winter and summer, average energy consumption peaks close to 30,000 MWH and during spring and fall, average energy consumption falls close to 27,500 MWH. 
+```{r, echo = FALSE}
+barcelona_1 %>% 
+  group_by(month) %>% 
+  summarise(`Average Energy Output` = mean(`total load actual`)) %>% 
+  ggplot(data = ., aes(x = month, y = `Average Energy Output`)) + 
+  geom_line(color = "navy") +
+  geom_smooth(aes(x = month, y = `Average Energy Output`), method = "lm", size = 0.5, color = "gold", se = FALSE) +
+  # Shading for Winter (Dec, Jan, Feb)
+  annotate("rect", xmin = 12-0.5, xmax = 2+0.5, ymin = -Inf, ymax = Inf,
+           fill = "blue", alpha = 0.25) +
+  # Shading for Spring (Mar, Apr, May)
+  annotate("rect", xmin = 3-0.5, xmax = 5+0.5, ymin = -Inf, ymax = Inf,
+           fill = "lightgreen", alpha = 0.25) +
+  # Shading for Summer (Jun, Jul, Aug)
+  annotate("rect", xmin = 6-0.5, xmax = 8+0.5, ymin = -Inf, ymax = Inf,
+           fill = "yellow", alpha = 0.25) +
+  # Shading for Fall (Sep, Oct, Nov)
+  annotate("rect", xmin = 9-0.5, xmax = 11+0.5, ymin = -Inf, ymax = Inf,
+           fill = "orange", alpha = 0.25) + 
+  scale_x_continuous(breaks = seq_along(month.name),
+                     labels = month.name) +
+  labs(x = "Months") +
+  labs(y = "Average Energy Output") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 55, hjust = 1))
+```
+
+### Average Daily Output
+
+On any given day, the highest average consumption in Barcelona is during weekdays. This could be accounted for most industries/offices operating at those times. The lowest average consumption is on a Sunday. 
+```{r, echo = FALSE}
+barcelona_1$day_of_the_week <- factor(barcelona_1$day_of_the_week, 
+                         levels = c("Mon", "Tue","Wed","Thu",
+                                    "Fri", "Sat", "Sun"))
+
 ggplot(data = barcelona_1, aes(x = day_of_the_week, y = `total load actual`, fill = day_of_the_week)) +
-  geom_boxplot()
-
-ggplot(data = barcelona_1, aes(x = year, y = `total load actual`, fill = year)) +
-  geom_boxplot()
-
-ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = season)) +
-  geom_boxplot()
+  geom_boxplot(show.legend = FALSE) +
+  labs(x = "Day of the Week") +
+  labs(y = "Total Energy Output") +
+  theme_classic()
 ```
 
 ```{r, include = FALSE}
@@ -181,9 +254,14 @@ barcelona_cor <- barcelona_1 %>%
   select(where(is.numeric)) %>% 
   select(-c(1))
 
-cor_total <- cor(barcelona_cor)
+just_this_cor <- barcelona_cor %>% 
+  select(-c(`generation biomass`, `generation hydro run-of-river and poundage`,
+            `forecast solar day ahead`, `forecast wind onshore day ahead`,
+            `generation other`,`generation nuclear`))
 
-png(filename = "total_corrplot.png", width = 1200, height = 800)
+cor_total <- cor(just_this_cor)
+
+#png(filename = "total_corrplot.png", width = 1200, height = 800)
 
 corrplot(cor_total, method = "number")
 
@@ -285,12 +363,6 @@ lm_solar_tidy_significant <- lm_solar_tidy %>%
 summary(lm_solar)
 ```
 
-### Density Plot
-
-```{r}
-ggplot(barcelona_1, aes(x = `total load actual`)) +
-  geom_density(alpha = 0.6, fill = "navy")
-```
 :::
 
 ## Bayesian Method
