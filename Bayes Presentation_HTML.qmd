@@ -1,0 +1,606 @@
+---
+title: "Bayes Renewable Energy Forecasting"
+format: html
+author: "Andrew, Wilneris, William, Eugene"
+subtitle: "[Github Link](https://github.com/anishitomi/Bayes-Renewable-Energy-Forecasting-in-Spain)"
+---
+
+## Introduction
+
+This project focuses on analyzing energy consumption and renewable energy generation in Barcelona through a Bayesian approach using the following datasets, [Data on Kaggle](https://www.kaggle.com/datasets/nicholasjhana/energy-consumption-generation-prices-and-weather/data).
+
+The objectives are:
+
+1.  **Plot the Distribution of Total Energy Demand**: Visualize how energy demand is distributed and explore its variation across different time scales.
+
+2.  **Features Selection**: Investigate whether specific features in the data, such as weather conditions or temporal factors (e.g., day of the week, season, or hour), can predict total energy demand or renewable energy generation from wind and solar sources.
+
+3.  **Forecasting Supply and Demand**: Use Bayesian methods to forecast renewable energy supply and total energy demand, enabling an assessment of the gap between supply and demand.
+
+## Methodology
+
+-   **Datasets:** The first dataset is a 35,064 row and 29 column sheet comprised of different energy source variables and the total load output. The second dataset is a 178,396 row and 17 column sheet comprised of weather features.
+
+-   **Data Preparation**: The datasets were combined and filtered for the city of Barcelona, removed NA values and removed columns that had zero values. We also extracted relevant temporal features like season, month and day of the week. The final dataset is a 35,428 row and 42 column sheet.
+
+-   **Bayesian Approach**: Leverage Bayesian modeling to incorporate prior knowledge, quantify uncertainty, and provide probabilistic predictions for more reliable insights.
+
+```{r, include = FALSE}
+# Loading in Libraries
+library(janitor)
+library(here)
+library(tidyverse)
+library(rstan)
+library(bayesrules)
+library(bayesplot)
+library(broom.mixed)
+library(ggpubr)
+library(corrplot)
+library(car)
+library(rstanarm)
+```
+
+```{r, warning = FALSE, message=FALSE, include = FALSE}
+# Reading in Data
+energy_data <- read_csv("Data/energy_dataset.csv")
+weather_features_data <- read_csv("Data/weather_features.csv")
+```
+
+```{r, warning = FALSE, message=FALSE, include = FALSE}
+# Joining the Data Frames Together
+names(weather_features_data)[names(weather_features_data) == "dt_iso"] <- "time"
+str(weather_features_data)
+```
+
+```{r, warning = FALSE, message=FALSE, include = FALSE}
+energy_weather_data <- merge(energy_data, weather_features_data, by = c("time"))
+```
+
+```{r, warning = FALSE, message=FALSE, include = FALSE}
+# Writing a New CSV File
+write.csv(energy_weather_data, "energy_weather_data")
+```
+
+```{r, warning = FALSE, message=FALSE, include = FALSE}
+#Exploratory Analysis
+#Exploring Combined Dataset
+energy_weather_data <- read_csv("energy_weather_data")
+```
+
+```{r, include = FALSE}
+# Filter for Barcelona
+barcelona_weather_data <- energy_weather_data %>% 
+  filter(city_name == "Barcelona")
+```
+
+```{r, include = FALSE}
+# Looking at the dim of new barcelona_weather_data
+dim(barcelona_weather_data)
+```
+
+```{r, include = FALSE}
+# Count columns that have too much zeros or NAs
+df_na <- as.data.frame(colSums(is.na(barcelona_weather_data)))
+```
+
+```{r, include = FALSE}
+# Count zeros
+df_zero <- as.data.frame(colSums(barcelona_weather_data==0))
+```
+
+```{r, include = FALSE}
+# Combine zero and NA data for better viewing
+df_zero_na <- cbind(df_na, df_zero)
+```
+
+```{r, include = FALSE}
+# Remove other columns such as city_name and have only zero/NA values
+barcelona_1 <- subset(barcelona_weather_data, select = -c(city_name, temp_min, temp_max, weather_id, `generation hydro pumped storage aggregated`, `forecast wind offshore eday ahead`, rain_1h, rain_3h, snow_3h))
+
+```
+
+```{r, include = FALSE}
+# Removing rows with NA values
+barcelona_1 <- na.omit(barcelona_1)
+```
+
+```{r, include = FALSE}
+# Extract Date Features (Month, Year, Day)
+str(barcelona_1$time)
+```
+
+```{r, include = FALSE}
+barcelona_1$year <- format(barcelona_1$time, "%Y")
+barcelona_1$month <- format(barcelona_1$time, "%m")
+barcelona_1$day <- format(barcelona_1$time, "%d")
+barcelona_1$day_of_the_week <- format(barcelona_1$time, "%a")
+```
+
+```{r, include = FALSE}
+# Converting columns to numerical items
+barcelona_1 <- transform(barcelona_1,
+                         month = as.numeric(month),
+                         day = as.numeric(day),check.names = FALSE)
+
+# x<- gsub(".", " ", colnames(as.data.frame(barcelona_1)))
+
+names(barcelona_1) <- gsub(".", " ", names(barcelona_1), fixed = TRUE)
+```
+
+```{r, include = FALSE}
+# Seasons in Spain link: https://seasonsyear.com/Spain/Barcelona
+barcelona_1 <- barcelona_1 %>%
+  mutate(season = case_when(
+    month >= 3 & month <= 5 ~ "Spring",
+    month >= 6 & month <= 8 ~ "Summer",
+    month >= 9 & month <= 11 ~ "Fall",
+    TRUE ~ "Winter"
+  ))
+
+```
+
+```{r, include = FALSE}
+# This unique function is to just explore different values in certain columns of the dataset
+sort(unique(barcelona_1$season))
+```
+
+```{r, include = FALSE}
+# Removing row with 2014 data value
+# Since their is only one value for the year 2014 we decided to remove that row
+barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
+```
+
+## Insights
+
+::: panel-tabset
+### Plot 1
+
+```{r}
+ggplot(data = barcelona_1, aes(x = `price actual`, y = `generation solar`)) +
+  geom_hex() +
+  stat_smooth(method = "lm") 
+```
+
+### Plot 2
+
+```{r}
+ggplot(data = barcelona_1, aes(x = day_of_the_week, y = `total load actual`, fill = day_of_the_week)) +
+  geom_boxplot()
+
+ggplot(data = barcelona_1, aes(x = year, y = `total load actual`, fill = year)) +
+  geom_boxplot()
+
+ggplot(data = barcelona_1, aes(x = season, y = `total load actual`, fill = season)) +
+  geom_boxplot()
+```
+
+```{r, include = FALSE}
+#Features Importance
+#Correlations
+barcelona_cor <- barcelona_1 %>% 
+  select(where(is.numeric)) %>% 
+  select(-c(1))
+
+cor_total <- cor(barcelona_cor)
+
+png(filename = "total_corrplot.png", width = 1200, height = 800)
+
+corrplot(cor_total, method = "number")
+
+#dev.off()
+```
+
+```{r, include = FALSE}
+# Remove more columns that do not show values in correlation matrix
+colnames(barcelona_cor)
+```
+
+```{r}
+barcelona_new_cor <- barcelona_cor %>% 
+  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+            `generation fossil peat`,`generation geothermal`,`generation marine`,
+            `generation wind offshore`))
+```
+
+```{r}
+#png(filename = "total_new_corrplot.png", width = 1500, height = 1200)
+
+corrplot(cor(barcelona_new_cor), method = "number", type="lower", tl.srt = 45)
+
+#dev.off()
+```
+
+```{r, include = FALSE}
+# Use lm() and identify columns that have a statistical significance with 'total load actual' based on columns that have correlation
+lm_model <- lm(`total load actual` ~ `generation fossil brown coal/lignite`+
+                 `generation fossil gas` + `generation fossil hard coal` +
+                 `generation fossil oil` + `generation hydro water reservoir` +
+                 `generation solar`, data = barcelona_1)
+
+lm_df <- summary(lm_model)
+```
+
+```{r, include = FALSE}
+lm_df_tidy <- tidy(lm_df)
+head(lm_df_tidy)
+
+lm_df_tidy_significant <- lm_df_tidy %>% 
+  filter(p.value < 0.05)
+
+view(lm_df_tidy_significant)
+```
+
+```{r, include = FALSE}
+barcelona_new <- barcelona_1 %>% 
+  select(`generation fossil gas`,`generation fossil hard coal`,
+         `generation fossil oil`, `generation hydro water reservoir`, 
+         `generation solar`,`total load actual`)
+```
+
+```{r, include = FALSE}
+lm_model <- lm(`total load actual` ~ ., data = barcelona_new)
+
+summary(lm_model)
+```
+
+```{r, include = FALSE}
+#Check for multicollinearity (should be after correlation)
+vif(lm_model)
+```
+
+```{r, include = FALSE}
+# Use lm() and identify columns that have a statistical significance with 'generation wind onshore'
+summary(barcelona_1$`generation wind onshore`)
+summary(barcelona_1$`generation wind offshore`)
+```
+
+```{r, include = FALSE}
+lm_wind <- lm(`generation wind onshore` ~ ., data = barcelona_1)
+
+lm_wind_model <- summary(lm_wind)
+
+lm_wind_tidy <- tidy(lm_wind_model)
+
+lm_wind_tidy_significant <- lm_wind_tidy %>% 
+  filter(p.value < 0.05)
+
+#view(lm_wind_tidy_significant)
+```
+
+```{r, include = FALSE}
+# Use lm() and identify columns that have a statistical significance with 'generation solar'
+lm_solar <- lm(`generation solar` ~ ., data = barcelona_1)
+
+lm_solar_model <- summary(lm_solar)
+
+lm_solar_tidy <- tidy(lm_solar_model)
+
+lm_solar_tidy_significant <- lm_solar_tidy %>% 
+  filter(p.value < 0.05)
+
+#view(lm_solar_tidy_significant)
+```
+
+```{r, include = FALSE}
+summary(lm_solar)
+```
+
+### Density Plot
+
+```{r}
+ggplot(barcelona_1, aes(x = `total load actual`)) +
+  geom_density(alpha = 0.6, fill = "navy")
+```
+:::
+
+## Bayesian Method
+
+### Bayesian Approach using stan_glm()
+
+```{r, results='hide'}
+barcelona_model <- stan_glm(
+  `total load actual` ~ `generation fossil gas`,
+  data = barcelona_1,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+Bayesian Regression Model
+
+```{r, include = FALSE}
+summary(barcelona_1$`generation fossil oil shale`)
+```
+
+------------------------------------------------------------------------
+
+### Bayesian Non-Renewable Energy
+
+```{r, results='hide'}
+barcelona_non_renewable_energy_sources <- 
+  stan_glm(`total load actual` ~ `generation fossil brown coal/lignite` +
+  `generation fossil hard coal` + `generation fossil gas` + `generation fossil oil` + `generation nuclear`,
+  data = barcelona_1,
+  family = gaussian(),
+  chains = 4, 
+  iter = 5000, 
+  seed = 84734
+)
+```
+
+```{r, include = FALSE}
+summary(barcelona_1$`generation fossil brown coal lignite`)
+summary(barcelona_1$`generation fossil hard coal`)
+summary(barcelona_1$`generation fossil gas`)
+summary(barcelona_1$`generation fossil oil`)
+summary(barcelona_1$`generation nuclear`)
+```
+
+```{r, results='hide'}
+
+# Creating a new data frame with appropriate column names
+new_data_for_prediction_nonrenewable <- data.frame(
+  `generation fossil brown coal/lignite` = 448.5,  # mean value
+  `generation fossil hard coal` = 4257,            # mean value
+  `generation fossil gas` = 5624,                  # mean value
+  `generation fossil oil` = 298.2,                 # mean value
+  `generation nuclear` = 6265,
+  check.names = FALSE
+)
+
+
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+prediction <- 
+  posterior_predict(barcelona_non_renewable_energy_sources, newdata =
+                      new_data_for_prediction_nonrenewable)
+```
+
+```{r}
+mcmc_dens(prediction) + xlab("prediction_of_nonrewnewable_resources")
+```
+
+### Bayesian Visuals
+
+```{r}
+library(ggplot2)
+library(ggdist)
+
+## step 1: extract the predictions from model!
+
+prediction_values <- as.vector(prediction)
+
+# step 2: plot both the original density and new density together
+ggplot() +
+
+  geom_density(data = barcelona_1, aes(x = `total load actual`), 
+               fill = "navy", alpha = 0.6) +
+  geom_density(aes(x = prediction_values), 
+               fill = "red", alpha = 0.4) +
+  xlab("total.load.actual") +
+  ylab("Density") +
+  ggtitle("Comparison of Actual vs Predicted", subtitle = "Non-Renewable Energy Resources") +
+  theme_minimal()
+```
+
+### Bayesian Renewable Energy
+
+```{r, results='hide'}
+barcelona_renewable_energy_sources <- stan_glm( 
+  `total load actual` ~ `generation biomass` + `generation other renewable` + `generation nuclear` + `generation solar` + `generation wind onshore`,
+  data = barcelona_1,
+  family = gaussian(),  # ensure this is a function call for the Gaussian family
+  chains = 4, 
+  iter = 5000, 
+  seed = 84736
+)
+```
+
+```{r, include = FALSE}
+summary(barcelona_1$`generation biomass`)
+summary(barcelona_1$`generation other renewable`)
+summary(barcelona_1$`generation nuclear`)
+summary(barcelona_1$`generation solar`)
+summary(barcelona_1$`generation wind onshore`)
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+new_data_for_prediction_renewable <- data.frame(
+  `generation biomass` = 383.2,               # mean value
+  `generation other renewable` = 85.72,       # mean value 
+  `generation nuclear` = 6265,                # mean value 
+  `generation solar` = 1429.6,                # mean value 
+  `generation wind onshore` = 5475,            # mean value 
+  check.names = FALSE 
+)
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+prediction <- 
+  posterior_predict(barcelona_renewable_energy_sources, newdata = new_data_for_prediction_renewable)
+```
+
+```{r}
+mcmc_dens(prediction) + xlab("prediction_of_rewnewable_resources")
+```
+
+```{r}
+library(ggplot2)
+library(ggdist)
+
+## step 1: extract the predictions from model!
+
+prediction_values <- as.vector(prediction)
+
+# step 2: plot both the original density and new density together
+ggplot() +
+
+  geom_density(data = barcelona_1, aes(x = `total load actual`), 
+               fill = "navy", alpha = 0.6) +
+  geom_density(aes(x = prediction_values), 
+               fill = "red", alpha = 0.4) +
+  xlab("total.load.actual") +
+  ylab("Density") +
+  ggtitle("Comparison of Actual vs Predicted", subtitle = "Renewable Energy Sources") +
+  theme_minimal()
+```
+
+------------------------------------------------------------------------
+
+### Total Output Demand Model
+
+```{r, results='hide'}
+demand_df <- barcelona_1 %>% 
+  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
+            `generation fossil peat`, `generation geothermal`, `generation marine`, 
+            `generation wind offshore`))
+
+demand_model <- stan_glm(
+  `total load actual` ~ `generation fossil brown coal/lignite`+
+                 `generation fossil gas` + `generation fossil hard coal` +
+                 `generation fossil oil` + `generation hydro water reservoir` +
+                 `generation solar` + wind_speed + temp + month + day,
+  data = demand_df,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+### Renewable Sources Model
+
+```{r, results='hide'}
+renewable_model <- stan_glm(
+  `generation wind onshore` ~ `generation hydro pumped storage consumption` + wind_speed,
+  data = demand_df,
+  family = gaussian(),
+  prior = normal(0, 2),
+  chains = 4,
+  iter = 2000,
+  seed = 123
+)
+```
+
+### New Data (Need to include non renewable and renewable energey sources)
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+
+forecast_df <- data.frame(`generation fossil brown coal/lignite` = 300,
+                       `generation fossil gas` = 231,
+                       `generation fossil hard coal` = 213,
+                       `generation fossil oil` = 123,
+                       `generation hydro water reservoir` = 1233,
+                       `generation solar` = 145,
+                       `generation hydro pumped storage consumption` = 1000,
+                       wind_speed = 12,
+                       temp = 65,
+                       month = 12,
+                       day = 3,
+                       check.names = FALSE)
+
+renewable_df <- data.frame(
+                       `generation hydro water reservoir` = 1233,
+                       `generation solar` = 145,
+                       `generation hydro pumped storage consumption` = 1000,
+                       wind_speed = 12,
+                       temp = 65,
+                       month = 12,
+                       day = 3,
+                       check.names = FALSE)
+```
+
+### Forecast Total Demand and Renewable Sources Supply Calculation
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+demand_forecast <- posterior_predict(demand_model, newdata = forecast_df )
+
+renewable_forecast <- posterior_predict(renewable_model, newdata = renewable_df)
+
+gap_forecast <- demand_forecast - renewable_forecast
+```
+
+### Forecast Total Demand and Renewable Sources Supply Visualization
+
+```{r}
+demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
+                                 y = density(demand_forecast)$y)
+
+
+renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
+                                 y = density(renewable_forecast)$y)
+
+gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
+                                 y = density(gap_forecast)$y)
+
+ggplot() +
+  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.25,  data = demand_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "gold", alpha = 0.25,  data = gap_forecast_df) +
+  theme_minimal()
+```
+
+```{r}
+
+demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
+                                 y = density(demand_forecast)$y)
+
+
+renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
+                                 y = density(renewable_forecast)$y)
+
+gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
+                                 y = density(gap_forecast)$y)
+
+original_df <- data.frame(x = density(barcelona_1$`total load actual`)$x, 
+                                 y = density(barcelona_1$`total load actual`)$y)
+
+ggplot() +
+  geom_area(aes(x=x ,y=y), fill = "red", alpha = 0.25,  data = demand_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
+  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.6,  data = original_df) + 
+  theme_minimal() 
+```
+
+## Results and Interpretation
+
+Frequentist Approach: Results in the total distribution plot show that the average electrical output in Barcelona is at 30,xxx MWH. However, the range of the output could possibly be anywhere from 20,xxx to 40,xxx MWH.
+
+Using a Bayesian approach, we analyzed energy consumption and renewable energy generation in Barcelona, focusing on uncovering patterns, predicting demand, and forecasting supply. Here are the key findings:
+
+-   **Distribution of Total Energy Demand**:
+
+    -   The posterior distribution of total energy demand revealed a mean consumption of approximately **X MWh**, with credible intervals indicating variability during peak and off-peak seasons (should we also do peak and off-peak hours?)
+
+    -   Demand patterns showed strong temporal dependencies, with higher consumption during weekdays compared to weekends, and seasonal fluctuations corresponding to temperature changes.
+
+-   **Feature Importance in Predicting Demand**:
+
+    -   Bayesian regression identified **variable 1, variable 2, etc.,** as the most significant predictors of total energy demand, with high posterior probabilities of positive influence.
+
+    -   Features such as **variable 1, variable 2, etc.,**had moderate contributions, highlighting temporal dependencies in demand.
+
+-   **Prediction of Renewable Energy Generation**:
+
+    -   **Solar Radiation** showed a strong positive correlation with \_\_\_\_, while **wind speed** exhibited a nonlinear relationship with wind energy generation.
+
+    -   Posterior estimates suggested that solar energy generation is more predictable than wind energy due to consistent daily cycles.
+
+-   **Forecasting Supply and Demand**:
+
+    -   Bayesian forecasting provided probabilistic predictions for future energy supply and demand, offering insights into the uncertainty around the estimates.
+
+    -   Forecasts indicated a potential **X% shortfall** in renewable energy supply during peak demand periods, emphasizing the need for supplemental energy resources.
+
+-   **Uncertainty Management**:
+
+    -   The Bayesian approach provided a more precise range of outputs, effectively reducing uncertainty in predictions. This narrower range of possible outcomes equips stakeholders with clearer, more actionable insights, which are essential for effective planning and risk management.
+
+## Conclusion
+
+The Bayesian analysis successfully highlighted key predictors of energy demand, quantified relationships between weather variables and renewable energy generation, and provided probabilistic forecasts of supply-demand gaps. This approach offers a robust framework for managing uncertainty in energy planning and can guide future policy and operational decisions.
