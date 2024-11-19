@@ -15,10 +15,10 @@ Plot the distribution of total energy demand. Can any of the features in the dat
 forecast a renewable energy sources supply and total energy demand to see the gap?
 
 **Project Contributors**
-- Wilneris Carrion Colon
-- Eugene Garvilles
-- William Kim
-- Andrew Nishitomi
+- Wilneris Carrion Colon - https://github.com/wcarri
+- Eugene Garvilles - https://github.com/typingegg
+- William Kim - https://github.com/williamk670
+- Andrew Nishitomi - https://github.com/anishitomi
 
 ### 🧰 Languages/Tools
 <img align="left" alt="rstudio" width="30px" style="padding-right:10px;" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rstudio/rstudio-original.svg" />
