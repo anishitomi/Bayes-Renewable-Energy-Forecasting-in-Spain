@@ -7,6 +7,9 @@
 At Chaminade University of Honolulu, we have a Final Semester Project and we have been tasked to explore Renewable Energy Forecasting in Spain 🇪🇸📌. Within this project, will be tasked to dive deeper
 into use specific case of Bayesian Statistics to predict and analyze Renewable Energy Forcasting in Spain. We obtained two datasets from Kaggle and the first dataset is a 35,064 row and 29 column sheet comprised of different energy source variables and the total load output. The second dataset is a 178,396 row and 17 column sheet comprised of weather features.
 
+![map_of_spain](https://github.com/user-attachments/assets/6b96e3a2-bb72-46fc-8922-ea5613e60aea)
+
+
 ### **Objective of our Project**  📊 📈 📉   <br>
 Plot the distribution of total energy demand. Can any of the features in the data help us predict demand? Can any of the features in the data help us predict wind or solar energy generation. Can we
 forecast a renewable energy sources supply and total energy demand to see the gap?
