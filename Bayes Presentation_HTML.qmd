@@ -150,7 +150,7 @@ sort(unique(barcelona_1$season))
 barcelona_1 <- barcelona_1[!(row.names(barcelona_1) %in% c("1")),]
 ```
 
-## Insights
+## Frequentist Results and Interpretation
 
 ::: panel-tabset
 ### Correlation
@@ -163,67 +163,59 @@ ggplot(data = barcelona_1, aes(x = `price actual`, y = `generation solar`)) +
   stat_smooth(method = "lm") 
 ```
 
-```{r}
-?geom_density
-```
-
-
-### Energy Consumption Distribution
+### Energy Distribution
 
 The graph shows the energy consumption distribution of Barcelona, Spain between 2015 and 2018. The mean energy consumption is at 28,705 MWH. However, possible values range between 18,041 MWH and 41,015 MWH. 
 
-Using Bayes, we are trying to achieve a more certain probability of a range of values and eventually narrow down the ~23,000 MWH gap of energy consumption. 
-```{r}
+```{r, echo = FALSE}
 summary(barcelona_1$`total load actual`)
+```
 
+Using Bayes, we are trying to achieve a more certain probability of a range of values and eventually narrow down the ~23,000 MWH gap of energy consumption. 
+
+
+```{r, warning = FALSE, echo = FALSE, message=FALSE}
 ggplot(barcelona_1, aes(x = `total load actual`)) +
   geom_density(alpha = 0.25, fill = "navy") +
   geom_vline(aes(xintercept = mean(`total load actual`)), 
-             color = "gold", size = 0.25) +
+             color = "gold", linewidth = 0.25) +
   labs(x = "Total Energy Output") +
-  labs(y = "Total Energy Output") +
   theme_classic()
 ```
-### Energy Output Over Time
+### Energy Over Time
 
 This plot gives us a general idea of the energy output in Spain from 2015 to 2018 between non-renewable and renewable energy sources. Non-renewable sources trend line show a slow upward slope while renewable sources trend line show a slow downward slope.
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, message = FALSE}
 barcelona_1$renewable_output_sum <- rowSums(select(barcelona_1, `generation biomass`, `generation other renewable`, `generation nuclear`, `generation solar`, `generation wind onshore`), na.rm = TRUE)
 
 ggplot() +
   geom_line(aes(x = time, y  = `total load actual`, color = "navy"),  alpha = 0.25, data = barcelona_1) + 
-  geom_smooth(aes(x = time, y = `total load actual`), method = "lm", data = barcelona_1, size = 0.5, color = "gold") +
+  geom_smooth(aes(x = time, y = `total load actual`), method = "lm", data = barcelona_1, linewidth = 0.5, color = "gold") +
   geom_line(aes(x = time, y = renewable_output_sum, color = "green"),alpha = 0.25, data = barcelona_1) + 
-  geom_smooth(aes(x = time, y = renewable_output_sum), method = "lm", data = barcelona_1, size = 0.5, color = "gray") +
-  scale_color_identity(name = NULL, labels = c(navy = "Non-Renewable", green = "Renewable"), guide = "legend") +
+  geom_smooth(aes(x = time, y = renewable_output_sum), method = "lm", data = barcelona_1, linewidth = 0.5, color = "gray") +
+  scale_color_identity(name = NULL, labels = c(green = "Renewable",navy = "Non-Renewable"), guide = "legend") +
   labs(x = "Year") +
   labs(y = "Total Energy Output") +
   theme_classic()
 
 ```
-### Average Energy Output per Month
+### Monthly
 
 This plot shows in any given year between 2015 and 2018, the energy consumption of Barcelona tends to decrease from January to December. During winter and summer, average energy consumption peaks close to 30,000 MWH and during spring and fall, average energy consumption falls close to 27,500 MWH. 
-```{r, echo = FALSE}
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
 barcelona_1 %>% 
   group_by(month) %>% 
   summarise(`Average Energy Output` = mean(`total load actual`)) %>% 
   ggplot(data = ., aes(x = month, y = `Average Energy Output`)) + 
   geom_line(color = "navy") +
-  geom_smooth(aes(x = month, y = `Average Energy Output`), method = "lm", size = 0.5, color = "gold", se = FALSE) +
-  # Shading for Winter (Dec, Jan, Feb)
-  annotate("rect", xmin = 12-0.5, xmax = 2+0.5, ymin = -Inf, ymax = Inf,
-           fill = "blue", alpha = 0.25) +
+  geom_smooth(aes(x = month, y = `Average Energy Output`), method = "lm", linewidth = 0.5, color = "gold", se = FALSE) +
   # Shading for Spring (Mar, Apr, May)
   annotate("rect", xmin = 3-0.5, xmax = 5+0.5, ymin = -Inf, ymax = Inf,
            fill = "lightgreen", alpha = 0.25) +
-  # Shading for Summer (Jun, Jul, Aug)
-  annotate("rect", xmin = 6-0.5, xmax = 8+0.5, ymin = -Inf, ymax = Inf,
-           fill = "yellow", alpha = 0.25) +
   # Shading for Fall (Sep, Oct, Nov)
   annotate("rect", xmin = 9-0.5, xmax = 11+0.5, ymin = -Inf, ymax = Inf,
-           fill = "orange", alpha = 0.25) + 
+           fill = "lightgreen", alpha = 0.25) + 
   scale_x_continuous(breaks = seq_along(month.name),
                      labels = month.name) +
   labs(x = "Months") +
@@ -231,8 +223,19 @@ barcelona_1 %>%
   theme_classic() +
   theme(axis.text.x = element_text(angle = 55, hjust = 1))
 ```
+### Seasonal Density
 
-### Average Daily Output
+Looking at the distribution of output energy per season, we see a similar pattern from the overall total output distribution. 
+
+```{r, warning = FALSE, echo = FALSE, message=FALSE}
+ggplot(barcelona_1, aes(x = `total load actual`, fill = season)) +
+  geom_density(alpha = 0.25) +
+  facet_wrap(~season) + 
+  labs(x = "Total Energy Output") +
+  theme_classic()
+```
+
+### Daily
 
 On any given day, the highest average consumption in Barcelona is during weekdays. This could be accounted for most industries/offices operating at those times. The lowest average consumption is on a Sunday. 
 ```{r, echo = FALSE}
@@ -273,14 +276,14 @@ corrplot(cor_total, method = "number")
 colnames(barcelona_cor)
 ```
 
-```{r}
+```{r, include = FALSE}
 barcelona_new_cor <- barcelona_cor %>% 
   select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
             `generation fossil peat`,`generation geothermal`,`generation marine`,
             `generation wind offshore`))
 ```
 
-```{r}
+```{r, include = FALSE}
 #png(filename = "total_new_corrplot.png", width = 1500, height = 1200)
 
 corrplot(cor(barcelona_new_cor), method = "number", type="lower", tl.srt = 45)
@@ -365,105 +368,221 @@ summary(lm_solar)
 
 :::
 
-## Bayesian Method
+## Bayesian Results and Interpretation
 
-### Bayesian Approach using stan_glm()
+With the prior insights discovered during our exploratory data analysis, how can a Bayesian approach predict Total Energy Output with more confidence and a lesser range of values? With the decrease of renewable output, how can we build a model that encourages a positive upward slope so that we are maximizing usage of renewable energy sources? What features can we include so that we can forecast, on a given day or month and available energy sources, the expected energy demand for Barcelona?
 
-```{r, results='hide'}
-barcelona_model <- stan_glm(
-  `total load actual` ~ `generation fossil gas`,
-  data = barcelona_1,
-  family = gaussian(),
-  prior = normal(0, 2),
-  chains = 4,
-  iter = 2000,
-  seed = 123
-)
-```
+### Total Energy Model
+Using the correlation matrix, we selected features that either have negative or positive relationship with the Total Energy Output to help us build our model for non-renewable energy output. 
 
-Bayesian Regression Model
-
-```{r, include = FALSE}
-summary(barcelona_1$`generation fossil oil shale`)
-```
-
-------------------------------------------------------------------------
-
-### Bayesian Non-Renewable Energy
-
-```{r, results='hide'}
-barcelona_non_renewable_energy_sources <- 
-  stan_glm(`total load actual` ~ `generation fossil brown coal/lignite` +
-  `generation fossil hard coal` + `generation fossil gas` + `generation fossil oil` + `generation nuclear`,
+```{r, results = FALSE, message=FALSE}
+total_demand <- 
+  stan_glm(`total load actual` ~ `generation biomass` + `generation fossil brown coal/lignite` + `generation fossil gas` + `generation fossil hard coal` +  `generation fossil oil` + `generation hydro pumped storage consumption` + `generation hydro water reservoir`+ `generation other renewable` + `generation solar` + `generation nuclear` + temp + humidity + wind_speed + season,
   data = barcelona_1,
   family = gaussian(),
   chains = 4, 
   iter = 5000, 
   seed = 84734
+  )
+```
+
+We used the data below as new data to predict energy output between seasons.
+```{r, echo = FALSE, warning = FALSE, message=FALSE}
+barcelona_1 %>% 
+  group_by(season) %>% 
+  summarise(average_biomass = mean(`generation biomass`),
+            average_brown_coal = mean(`generation fossil brown coal/lignite`),
+            average_hard_coal = mean(`generation fossil hard coal`),
+            average_gas = mean(`generation fossil gas`),
+            average_oil = mean(`generation fossil oil`),
+            average_hydro_pump = mean(`generation hydro pumped storage consumption`),
+            average_reservoir = mean(`generation hydro water reservoir`),
+            average_other = mean(`generation other renewable`),
+            average_solar = mean(`generation solar`),
+            average_nuclear = mean(`generation nuclear`),
+            average_temp = mean(temp),
+            average_humidity = mean(humidity),
+            average_wind = mean(wind_speed))
+```
+
+
+```{r, include = FALSE}
+# New data for Fall
+total_prediction_fall <- data.frame(
+  `generation biomass` = 386.9510,
+  `generation fossil brown coal/lignite` = 559.3503,  # mean value
+  `generation fossil hard coal` = 4792.954,            # mean value
+  `generation fossil gas` = 6205.886,                  # mean value
+  `generation fossil oil` = 300.1625,                 # mean value
+  `generation hydro pumped storage consumption` = 415.5551,
+  `generation hydro water reservoir` = 2129.056,
+  `generation other renewable` = 87.03605,
+  `generation solar`= 1236.850,
+  `generation nuclear` = 6138.958,
+  temp = 290.5966,
+  humidity = 77.95933,
+  wind_speed = 2.520054,
+  season = "Fall", 
+  check.names = FALSE
+)
+
+# New data for Spring
+total_prediction_spring <- data.frame(
+  `generation biomass` = 357.8086,
+  `generation fossil brown coal/lignite` = 284.2471,  # mean value
+  `generation fossil hard coal` = 3305.725,            # mean value
+  `generation fossil gas` = 4886.975,                  # mean value
+  `generation fossil oil` = 291.9479,                 # mean value
+  `generation hydro pumped storage consumption` = 542.8384,
+  `generation hydro water reservoir` = 3250.740,
+  `generation other renewable` = 85.22912,
+  `generation solar`= 1516.592,
+  `generation nuclear` = 6113.434,
+  temp = 287.8753,
+  humidity = 74.03539,
+  wind_speed = 2.959351,
+  season = "Spring", 
+  check.names = FALSE
+)
+
+# New data for Summer
+total_prediction_summer <- data.frame(
+  `generation biomass` = 394.4456,
+  `generation fossil brown coal/lignite` = 481.1043,  # mean value
+  `generation fossil hard coal` = 4546.584,            # mean value
+  `generation fossil gas` = 5895.656,                  # mean value
+  `generation fossil oil` = 302.4052,                 # mean value
+  `generation hydro pumped storage consumption` = 335.8019,
+  `generation hydro water reservoir` = 2276.620,
+  `generation other renewable` = 84.53691,
+  `generation solar`= 1888.378,
+  `generation nuclear` = 6313.549,
+  temp = 297.6232,
+  humidity = 70.50803,
+  wind_speed = 2.752949,
+  season = "Summer", 
+  check.names = FALSE
+)
+
+# New data for Winter
+total_prediction_winter <- data.frame(
+  `generation biomass` = 394.0546,
+  `generation fossil brown coal/lignite` = 470.7911,  # mean value
+  `generation fossil hard coal` = 4389.933,            # mean value
+  `generation fossil gas` = 5507.906,                  # mean value
+  `generation fossil oil` = 298.4096,                 # mean value
+  `generation hydro pumped storage consumption` = 612.3973,
+  `generation hydro water reservoir` = 2761.329,
+  `generation other renewable` = 86.07247,
+  `generation solar`= 1068.613,
+  `generation nuclear` = 6499.138,
+  temp = 283.1869,
+  humidity = 73.52012,
+  wind_speed = 2.914918,
+  season = "Winter", 
+  check.names = FALSE
 )
 ```
 
 ```{r, include = FALSE}
-summary(barcelona_1$`generation fossil brown coal lignite`)
-summary(barcelona_1$`generation fossil hard coal`)
-summary(barcelona_1$`generation fossil gas`)
-summary(barcelona_1$`generation fossil oil`)
-summary(barcelona_1$`generation nuclear`)
+#predictions per season
+prediction_fall <- 
+  posterior_predict(total_demand, newdata = total_prediction_fall)
+
+prediction_spring <- 
+  posterior_predict(total_demand, newdata = total_prediction_spring)
+
+prediction_winter <- 
+  posterior_predict(total_demand, newdata = total_prediction_winter)
+
+prediction_summer <- 
+  posterior_predict(total_demand, newdata = total_prediction_summer)
 ```
+
+```{r, include = FALSE}
+# frequentist seasonal density
+season_frequentist_plot <- 
+  ggplot(barcelona_1, aes(x = `total load actual`, fill = season)) +
+  geom_density(alpha = 0.25, show.legend = FALSE) +
+  facet_wrap(~season) + 
+  labs(x = "", y= "")+
+  ggtitle("Frequentist Total Energy Distribution per Season") +
+  theme_classic() + 
+  theme(axis.text.y = element_blank(),
+        axis.line.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r, include = FALSE}
+demand_forecast_fall <- data.frame(x = density(prediction_fall)$x, 
+                                 y = density(prediction_fall)$y)
+
+demand_forecast_spring <- data.frame(x = density(prediction_spring)$x, 
+                                 y = density(prediction_spring)$y)
+
+demand_forecast_summer <- data.frame(x = density(prediction_summer)$x, 
+                                 y = density(prediction_summer)$y)
+
+demand_forecast_winter <- data.frame(x = density(prediction_winter)$x, 
+                                 y = density(prediction_winter)$y)
+
+plot_fall <- ggplot() + geom_area(aes(x=x ,y=y), fill = "orange", alpha = 0.25,  data = demand_forecast_fall) + theme_classic() + labs(x = "Fall", y = "") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank())
+
+plot_spring <- ggplot() + geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = demand_forecast_spring) + theme_classic() + labs(x = "Spring",y = "") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank())
+
+plot_summer <- ggplot() + geom_area(aes(x=x ,y=y), fill = "lightblue", alpha = 0.25,  data = demand_forecast_summer) + theme_classic() + labs(x = "Summer", y = "") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank())
+
+plot_winter <-ggplot() + geom_area(aes(x=x ,y=y), fill = "purple", alpha = 0.25,  data = demand_forecast_winter) + theme_classic() + labs(x = "Winter", y = "") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank())
+
+bayes_plot <- 
+  ggarrange(plot_fall, plot_spring, plot_summer, plot_winter, ncol = 2, nrow =2)
+bayes_plot <-
+  annotate_figure(bayes_plot, top = text_grob("Bayesian Total Energy Distribution per Season", size = 13))
+```
+
+```{r, include = FALSE}
+#mean(prediction_fall)
+#min(prediction_fall)
+#max(prediction_fall)
+
+#mean(prediction_spring)
+#min(prediction_spring)
+#max(prediction_spring)
+
+mean(prediction_summer)
+min(prediction_summer)
+max(prediction_summer)
+
+mean(prediction_winter)
+min(prediction_winter)
+max(prediction_winter)
+
+```
+
+The frequentist approach during our EDA revealed a wide distribution of predicted values of the total demand output per season. Using a Bayes approach created a more narrow distribution and managed uncertainty of total demand output per season.
+
+For Fall, the mean total output is at 28,395 MWH. However, possible values range between 20,481 MWH and 37,476 MWH. This is around a ~17,000 MWH difference.
+
+For Spring, the mean total output is at 27,994 MWH. However, possible values range between 18,550 MWH and 37,711 MWH. This is around a ~19,000 MWH difference.
+
+For Summer, the mean total output is at 29,185 MWH. However, possible values range between 19,506 MWH and 37,922 MWH. This is around a ~18,000 MWH difference.
+
+For Winter, the mean total output is at 29,347 MWH. However, possible values range between 20,932 MWH and 38,752 MWH. This is around a ~18,000 MWH difference.
+
+Overall, the model a more certain distribution of predicted values for any given season. These distributions are normally distributed and the ranges in values have decreased from a difference of 23,000 MWH to less than 20,000 MWH. 
+
+
+```{r, echo = FALSE}
+ggarrange(season_frequentist_plot, bayes_plot, nrow = 2)
+```
+
+### Total Energy Output vs Renewable Energy Output 
 
 ```{r, results='hide'}
-
-# Creating a new data frame with appropriate column names
-new_data_for_prediction_nonrenewable <- data.frame(
-  `generation fossil brown coal/lignite` = 448.5,  # mean value
-  `generation fossil hard coal` = 4257,            # mean value
-  `generation fossil gas` = 5624,                  # mean value
-  `generation fossil oil` = 298.2,                 # mean value
-  `generation nuclear` = 6265,
-  check.names = FALSE
-)
-
-
-```
-
-```{r, error=FALSE, warning=FALSE, message=FALSE}
-prediction <- 
-  posterior_predict(barcelona_non_renewable_energy_sources, newdata =
-                      new_data_for_prediction_nonrenewable)
-```
-
-```{r}
-mcmc_dens(prediction) + xlab("prediction_of_nonrewnewable_resources")
-```
-
-### Bayesian Visuals
-
-```{r}
-library(ggplot2)
-library(ggdist)
-
-## step 1: extract the predictions from model!
-
-prediction_values <- as.vector(prediction)
-
-# step 2: plot both the original density and new density together
-ggplot() +
-
-  geom_density(data = barcelona_1, aes(x = `total load actual`), 
-               fill = "navy", alpha = 0.6) +
-  geom_density(aes(x = prediction_values), 
-               fill = "red", alpha = 0.4) +
-  xlab("total.load.actual") +
-  ylab("Density") +
-  ggtitle("Comparison of Actual vs Predicted", subtitle = "Non-Renewable Energy Resources") +
-  theme_minimal()
-```
-
-### Bayesian Renewable Energy
-
-```{r, results='hide'}
-barcelona_renewable_energy_sources <- stan_glm( 
-  `total load actual` ~ `generation biomass` + `generation other renewable` + `generation nuclear` + `generation solar` + `generation wind onshore`,
+wind_model <- stan_glm( 
+  `generation wind onshore` ~ temp + wind_speed + season,
   data = barcelona_1,
   family = gaussian(),  # ensure this is a function call for the Gaussian family
   chains = 4, 
@@ -472,207 +591,65 @@ barcelona_renewable_energy_sources <- stan_glm(
 )
 ```
 
-```{r, include = FALSE}
-summary(barcelona_1$`generation biomass`)
-summary(barcelona_1$`generation other renewable`)
-summary(barcelona_1$`generation nuclear`)
-summary(barcelona_1$`generation solar`)
-summary(barcelona_1$`generation wind onshore`)
+```{r, results = 'hide'}
+solar_model <- stan_glm( 
+  `generation solar` ~ temp + wind_speed + humidity + season,
+  data = barcelona_1,
+  family = gaussian(),  # ensure this is a function call for the Gaussian family
+  chains = 4, 
+  iter = 5000, 
+  seed = 84736
+)
 ```
 
-```{r, error=FALSE, warning=FALSE, message=FALSE}
-new_data_for_prediction_renewable <- data.frame(
-  `generation biomass` = 383.2,               # mean value
-  `generation other renewable` = 85.72,       # mean value 
-  `generation nuclear` = 6265,                # mean value 
-  `generation solar` = 1429.6,                # mean value 
-  `generation wind onshore` = 5475,            # mean value 
+We used the data below as new data to predict energy output for the renewable source models of solar and wind.
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+barcelona_1 %>% 
+  group_by(season) %>% 
+  summarise(average_temp = mean(temp),
+            average_humidity = mean(humidity),
+            average_wind = mean(wind_speed))
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE, include = FALSE}
+wind_new_data <- data.frame(
+  temp = 291,
+  wind_speed = 2.52,
+  season = "Fall",
+  check.names = FALSE
+)
+  
+solar_new_data <- data.frame(
+  temp = 291,
+  wind_speed = 2.52,
+  humidity = 78,
+  season = "Fall",
   check.names = FALSE 
 )
 ```
 
+We combined the predictions for both wind and solar energy outputs.
 ```{r, error=FALSE, warning=FALSE, message=FALSE}
-prediction <- 
-  posterior_predict(barcelona_renewable_energy_sources, newdata = new_data_for_prediction_renewable)
+wind_prediction <- posterior_predict(wind_model, newdata = wind_new_data)
+
+solar_prediction <- posterior_predict(solar_model, newdata = solar_new_data)
+
+renewable_prediction <- wind_prediction + solar_prediction
 ```
 
-```{r}
-mcmc_dens(prediction) + xlab("prediction_of_rewnewable_resources")
+Plotting the previous total output model and the renewable output model to see the gap. 
+```{r, echo = FALSE}
+
+renewable_forecast <- data.frame(x = density(renewable_prediction)$x, 
+                                 y = density(renewable_prediction)$y)
+
+ggplot() + 
+  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.25,  data = demand_forecast_fall) + theme_classic() + labs(x = "", y = "", title = "Distribution between Total Energy Output and Renewable Energy Output") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank()) + 
+  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast) + theme_classic() + labs(x = "", y = "") + theme(axis.text.y = element_blank(),axis.line.y = element_blank(), axis.ticks.y = element_blank())
 ```
-
-```{r}
-library(ggplot2)
-library(ggdist)
-
-## step 1: extract the predictions from model!
-
-prediction_values <- as.vector(prediction)
-
-# step 2: plot both the original density and new density together
-ggplot() +
-
-  geom_density(data = barcelona_1, aes(x = `total load actual`), 
-               fill = "navy", alpha = 0.6) +
-  geom_density(aes(x = prediction_values), 
-               fill = "red", alpha = 0.4) +
-  xlab("total.load.actual") +
-  ylab("Density") +
-  ggtitle("Comparison of Actual vs Predicted", subtitle = "Renewable Energy Sources") +
-  theme_minimal()
-```
-
-------------------------------------------------------------------------
-
-### Total Output Demand Model
-
-```{r, results='hide'}
-demand_df <- barcelona_1 %>% 
-  select(-c(`generation fossil coal-derived gas`,`generation fossil oil shale`,
-            `generation fossil peat`, `generation geothermal`, `generation marine`, 
-            `generation wind offshore`))
-
-demand_model <- stan_glm(
-  `total load actual` ~ `generation fossil brown coal/lignite`+
-                 `generation fossil gas` + `generation fossil hard coal` +
-                 `generation fossil oil` + `generation hydro water reservoir` +
-                 `generation solar` + wind_speed + temp + month + day,
-  data = demand_df,
-  family = gaussian(),
-  prior = normal(0, 2),
-  chains = 4,
-  iter = 2000,
-  seed = 123
-)
-```
-
-### Renewable Sources Model
-
-```{r, results='hide'}
-renewable_model <- stan_glm(
-  `generation wind onshore` ~ `generation hydro pumped storage consumption` + wind_speed,
-  data = demand_df,
-  family = gaussian(),
-  prior = normal(0, 2),
-  chains = 4,
-  iter = 2000,
-  seed = 123
-)
-```
-
-### New Data (Need to include non renewable and renewable energey sources)
-
-```{r, error=FALSE, warning=FALSE, message=FALSE}
-
-forecast_df <- data.frame(`generation fossil brown coal/lignite` = 300,
-                       `generation fossil gas` = 231,
-                       `generation fossil hard coal` = 213,
-                       `generation fossil oil` = 123,
-                       `generation hydro water reservoir` = 1233,
-                       `generation solar` = 145,
-                       `generation hydro pumped storage consumption` = 1000,
-                       wind_speed = 12,
-                       temp = 65,
-                       month = 12,
-                       day = 3,
-                       check.names = FALSE)
-
-renewable_df <- data.frame(
-                       `generation hydro water reservoir` = 1233,
-                       `generation solar` = 145,
-                       `generation hydro pumped storage consumption` = 1000,
-                       wind_speed = 12,
-                       temp = 65,
-                       month = 12,
-                       day = 3,
-                       check.names = FALSE)
-```
-
-### Forecast Total Demand and Renewable Sources Supply Calculation
-
-```{r, error=FALSE, warning=FALSE, message=FALSE}
-demand_forecast <- posterior_predict(demand_model, newdata = forecast_df )
-
-renewable_forecast <- posterior_predict(renewable_model, newdata = renewable_df)
-
-gap_forecast <- demand_forecast - renewable_forecast
-```
-
-### Forecast Total Demand and Renewable Sources Supply Visualization
-
-```{r}
-demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
-                                 y = density(demand_forecast)$y)
-
-
-renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
-                                 y = density(renewable_forecast)$y)
-
-gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
-                                 y = density(gap_forecast)$y)
-
-ggplot() +
-  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.25,  data = demand_forecast_df) +
-  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
-  geom_area(aes(x=x ,y=y), fill = "gold", alpha = 0.25,  data = gap_forecast_df) +
-  theme_minimal()
-```
-
-```{r}
-
-demand_forecast_df <- data.frame(x = density(demand_forecast)$x, 
-                                 y = density(demand_forecast)$y)
-
-
-renewable_forecast_df <- data.frame(x = density(renewable_forecast)$x, 
-                                 y = density(renewable_forecast)$y)
-
-gap_forecast_df <- data.frame(x = density(gap_forecast)$x, 
-                                 y = density(gap_forecast)$y)
-
-original_df <- data.frame(x = density(barcelona_1$`total load actual`)$x, 
-                                 y = density(barcelona_1$`total load actual`)$y)
-
-ggplot() +
-  geom_area(aes(x=x ,y=y), fill = "red", alpha = 0.25,  data = demand_forecast_df) +
-  geom_area(aes(x=x ,y=y), fill = "green", alpha = 0.25,  data = renewable_forecast_df) +
-  geom_area(aes(x=x ,y=y), fill = "navy", alpha = 0.6,  data = original_df) + 
-  theme_minimal() 
-```
-
-## Results and Interpretation
-
-Frequentist Approach: Results in the total distribution plot show that the average electrical output in Barcelona is at 30,xxx MWH. However, the range of the output could possibly be anywhere from 20,xxx to 40,xxx MWH.
-
-Using a Bayesian approach, we analyzed energy consumption and renewable energy generation in Barcelona, focusing on uncovering patterns, predicting demand, and forecasting supply. Here are the key findings:
-
--   **Distribution of Total Energy Demand**:
-
-    -   The posterior distribution of total energy demand revealed a mean consumption of approximately **X MWh**, with credible intervals indicating variability during peak and off-peak seasons (should we also do peak and off-peak hours?)
-
-    -   Demand patterns showed strong temporal dependencies, with higher consumption during weekdays compared to weekends, and seasonal fluctuations corresponding to temperature changes.
-
--   **Feature Importance in Predicting Demand**:
-
-    -   Bayesian regression identified **variable 1, variable 2, etc.,** as the most significant predictors of total energy demand, with high posterior probabilities of positive influence.
-
-    -   Features such as **variable 1, variable 2, etc.,**had moderate contributions, highlighting temporal dependencies in demand.
-
--   **Prediction of Renewable Energy Generation**:
-
-    -   **Solar Radiation** showed a strong positive correlation with \_\_\_\_, while **wind speed** exhibited a nonlinear relationship with wind energy generation.
-
-    -   Posterior estimates suggested that solar energy generation is more predictable than wind energy due to consistent daily cycles.
-
--   **Forecasting Supply and Demand**:
-
-    -   Bayesian forecasting provided probabilistic predictions for future energy supply and demand, offering insights into the uncertainty around the estimates.
-
-    -   Forecasts indicated a potential **X% shortfall** in renewable energy supply during peak demand periods, emphasizing the need for supplemental energy resources.
-
--   **Uncertainty Management**:
-
-    -   The Bayesian approach provided a more precise range of outputs, effectively reducing uncertainty in predictions. This narrower range of possible outcomes equips stakeholders with clearer, more actionable insights, which are essential for effective planning and risk management.
 
 ## Conclusion
 
 The Bayesian analysis successfully highlighted key predictors of energy demand, quantified relationships between weather variables and renewable energy generation, and provided probabilistic forecasts of supply-demand gaps. This approach offers a robust framework for managing uncertainty in energy planning and can guide future policy and operational decisions.
+
+The Bayesian approach provided a more precise range of outputs, effectively reducing uncertainty in predictions. This narrower range of possible outcomes equips stakeholders with clearer, more actionable insights, which are essential for effective planning and risk management.
